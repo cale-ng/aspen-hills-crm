@@ -2,7 +2,7 @@
 
 > Living document. Update any time the architecture or a major implementation decision changes.
 
-**Last updated:** 2026-05-15 · **Version:** V0.1
+**Last updated:** 2026-05-15 · **Version:** V0.2
 
 ---
 
@@ -44,7 +44,11 @@ Aspen Hills CRM/
 │     ├─ seed.ts              # Initial opportunities (used as fallback if Supabase unset)
 │     └─ supabase/server.ts   # Service-role Supabase client (server only)
 ├─ supabase/
-│  └─ schema.sql              # DB schema; run in Supabase SQL editor
+│  ├─ schema.sql              # DB schema; run in Supabase SQL editor (initial)
+│  └─ reset.sql               # Drop + recreate (used to fix a half-applied initial schema)
+├─ scripts/
+│  ├─ seed.ts                 # Idempotent seeder; run via `dotenv -e .env.local -- npx tsx scripts/seed.ts`
+│  └─ inspect.ts              # Column availability utility
 ├─ docs/
 │  └─ aspen_hills_crm_spec.md # Original product spec
 ├─ public/                    # Static assets

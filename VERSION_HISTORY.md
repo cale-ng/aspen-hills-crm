@@ -4,6 +4,34 @@
 
 ---
 
+## V0.2 — 2026-05-15 · Supabase wired live
+
+**Summary**
+Connected the app to the live Supabase project. Schema applied, RLS disabled for v1, storage bucket created. Seed data inserted via script.
+
+**Changes**
+- `.env.local` populated with Supabase URL, anon key, service-role key (git-ignored)
+- Ran `supabase/reset.sql` against Supabase project `vzoiqclipckfxiihvxlh` (drop + recreate fixed a half-applied initial schema)
+- Added `scripts/seed.ts` (idempotent seeder; inserts by company-name check) and `scripts/inspect.ts` (column availability utility)
+- Installed `tsx` + `dotenv-cli` as devDependencies for running TS scripts against env
+- Seeded Be LOVE™ and Husk opportunities into the live DB with real UUIDs
+- Data layer (`src/lib/data.ts`) now pulls from Supabase end-to-end; seed-fallback only fires if env vars are missing
+
+**Files affected**
+- `.env.local` (untracked)
+- `supabase/reset.sql`
+- `scripts/seed.ts`, `scripts/inspect.ts`
+- `package.json`, `package-lock.json`
+- `VERSION_HISTORY.md`, `TECHNICAL_SPECIFICATIONS.md`, `DATA_DICTIONARY.md`
+
+**Known issues / pending**
+- User shared the service-role key in chat — should rotate it via Supabase dashboard after testing finishes
+- Intake form still not built (mutation path untested through UI)
+- AI features still gated on Anthropic API key
+- No automated tests yet
+
+---
+
 ## V0.1 — 2026-05-15 · Project foundation + tracker shell
 
 **Summary**

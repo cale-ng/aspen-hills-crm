@@ -2,7 +2,9 @@
 
 > Living document. Update whenever a table, column, or storage bucket is added or modified. Source of truth: [`supabase/schema.sql`](supabase/schema.sql).
 
-**Last updated:** 2026-05-15 · **Version:** V0.1
+**Last updated:** 2026-05-15 · **Version:** V0.2
+
+**Schema status:** Live in Supabase project `vzoiqclipckfxiihvxlh`. Applied via `supabase/reset.sql` after an initial half-applied state from `supabase/schema.sql`. Going forward, use `reset.sql` as the authoritative recreate; treat any future column change as a numbered migration in `supabase/migrations/`.
 
 ---
 

@@ -4,6 +4,20 @@
 
 ---
 
+## V0.2a — 2026-05-15 · Captured Context Library + Aspen Agent direction
+
+**Summary**
+Documented a major post-v1 product direction: each opportunity becomes a context-rich record (Fathom transcripts, emails, JDs, decks) that an embedded AI agent ("Aspen Agent") can reason over to suggest next steps, surface risks, draft proposals, and answer questions. Not yet built — captured in `APP_REQUIREMENTS.md` §3a with a priority sequencing plan.
+
+**Files affected**
+- `APP_REQUIREMENTS.md` — added §3a (Context Library + AI Agent)
+- `VERSION_HISTORY.md` — this entry
+
+**Known issues / pending**
+- Technical implications (parsing, embeddings, agent UX) not yet reflected in `TECHNICAL_SPECIFICATIONS.md` — will update when implementation starts
+
+---
+
 ## V0.2 — 2026-05-15 · Supabase wired live
 
 **Summary**

@@ -2,7 +2,7 @@
 
 > Living document. Update as requirements evolve. The canonical product spec lives in [`docs/aspen_hills_crm_spec.md`](docs/aspen_hills_crm_spec.md) — this file summarizes and tracks the build state against it.
 
-**Last updated:** 2026-05-15 · **Version:** V0.1
+**Last updated:** 2026-05-15 · **Version:** V0.2
 
 ---
 
@@ -69,6 +69,61 @@ Internal CRM for **Aspen Hills Advisors LLC** to track inbound and outbound sale
 
 ### Out of scope for v1
 See spec §11 (Future Features) — email ingestion, activity log, follow-up reminders, proposal generator, revenue dashboard, multi-user/auth, brokerage commission tracking, contact enrichment.
+
+---
+
+## 3a. Context Library + AI Agent (planned, post-v1)
+
+A larger feature direction the CRM is evolving toward: each opportunity becomes a **context-rich record** that an embedded AI agent can reason over to help drive the deal forward.
+
+### Context uploads (expands the v1 Files tab)
+Each opportunity supports uploading and tagging unstructured context:
+- **Fathom meeting recordings / transcripts** (or copy-pasted transcript text)
+- **Email threads** (paste content or .eml upload)
+- **Job descriptions** they shared
+- **Pitch decks / one-pagers** they sent
+- **LinkedIn profiles / company background docs**
+- **Any other relevant artifact** (proposals from competitors, RFPs, etc.)
+
+Each artifact is stored with: file, type (transcript / email / JD / deck / other), upload date, optional tag (e.g. "intro call · 2026-05-10"), and a short user-written note about what it is.
+
+### Opportunity-scoped AI agent
+A conversational agent on the detail panel — call it the "Aspen Agent" for now — that has read access to:
+1. All structured opportunity fields (pain, scope, notes, fit, stage, etc.)
+2. All uploaded context artifacts (transcripts, emails, JDs, decks)
+3. AI-generated outputs already on the record (pitch, pricing, equity)
+4. The Aspen Hills business context already baked into the system prompts
+
+The agent helps with:
+- **"What are the next steps with this opportunity?"** — pulls from latest meeting notes + stage
+- **"What questions should I ask in the next call?"** — finds gaps in our knowledge of their ops, decision criteria, timeline
+- **"Draft a proposal for this engagement"** — pulls scope, pricing estimate, equity terms, and writes a structured SOW
+- **"Summarize this meeting for the file"** — when a transcript is uploaded, generate a concise summary + extracted action items
+- **"What's the right contract structure here?"** — based on equity verdict + scope + stage
+- **"Flag risks I should be aware of"** — pull from transcripts + notes
+- **General Q&A** about the opportunity ("What did Taylor say about the HEB launch timing?")
+
+### Decision-support features
+Beyond pure Q&A, surface proactive recommendations on the detail panel:
+- **Suggested next action** ("Send pricing follow-up — last contact 8 days ago")
+- **Stage progression flags** ("Looks ready to move from Pitching → Proposal Sent based on the last transcript")
+- **Risk indicators** ("Multiple mentions of budget concerns — consider discount framing")
+- **Information gaps** ("We haven't asked about their current 3PL — important before pricing")
+
+### Implications (will update TECH_SPECIFICATIONS.md when this gets built)
+- Document parsing: PDF/DOCX/TXT/EML extraction → plain text
+- Audio transcription: if uploading raw Fathom video/audio (vs already-transcribed text), need Whisper or similar
+- Retrieval: probably vector embeddings + similarity search (Supabase has `pgvector`); alternatively just stuff everything into a long context window since Sonnet 4.6 supports 200K tokens — start simple, add RAG only if needed
+- Storage: existing `attachments` bucket extends naturally; add a `context_artifacts` table with `kind`, `extracted_text`, `tag`, `note`
+- Agent UX: chat-style panel inside the detail view, OR a "ask the agent" button per workflow
+
+### Priority sequencing
+This is a **phase-2 effort**, not a v1 blocker. Likely sequencing once v1 ships:
+1. V0.x: extend the Files tab into a typed Context Library (kind tagging, text extraction on upload)
+2. V0.x+1: opportunity-scoped chat agent with simple full-context-stuffing (no embeddings yet)
+3. V0.x+2: proactive recommendations rendered on the detail panel
+4. V0.x+3: proposal/contract draft generators
+5. V1.x: pgvector-backed retrieval if context size demands it
 
 ---
 

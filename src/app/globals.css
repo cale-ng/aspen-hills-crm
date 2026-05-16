@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
+/* ----------------------------------------------------------------
+   Aspen Hills CRM — Design tokens (dark mode, CPG/premium feel)
+   ---------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-base:        #0c0f0a;
+  --bg-surface:     #0e1209;
+  --bg-elevated:    #111408;
+
+  --border-subtle:  #1a1e12;
+  --border-default: #1e2518;
+  --border-active:  #2a3020;
+
+  --text-primary:   #e8e4d9;
+  --text-secondary: #c8d4b0;
+  --text-muted:     #5a6a45;
+  --text-dim:       #3a4a2a;
+
+  --accent-primary: #c8e06b;
+  --accent-hover:   #daf07a;
+
+  --font-mono:    'DM Mono', 'Courier New', monospace;
+  --font-display: 'Playfair Display', serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-base:        var(--bg-base);
+  --color-bg-surface:     var(--bg-surface);
+  --color-bg-elevated:    var(--bg-elevated);
+  --color-border-subtle:  var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-active:  var(--border-active);
+  --color-text-primary:   var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted:     var(--text-muted);
+  --color-text-dim:       var(--text-dim);
+  --color-accent:         var(--accent-primary);
+  --color-accent-hover:   var(--accent-hover);
+
+  --font-mono:    var(--font-mono);
+  --font-display: var(--font-display);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--bg-base);
+  color: var(--text-primary);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-mono);
+  font-feature-settings: "ss01", "cv01";
 }
+
+/* Custom scrollbar — subtle on the dark background */
+*::-webkit-scrollbar          { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track    { background: transparent; }
+*::-webkit-scrollbar-thumb    { background: var(--border-default); border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--border-active); }

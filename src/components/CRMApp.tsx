@@ -9,6 +9,7 @@ import { PipelineFilter } from "./PipelineFilter";
 import { OpportunityList } from "./OpportunityList";
 import { DetailPanel } from "./DetailPanel";
 import { IntakeForm } from "./IntakeForm";
+import { PasteEmailModal } from "./PasteEmailModal";
 
 type View =
   | { kind: "tracker" }
@@ -26,6 +27,22 @@ export function CRMApp({
   const [stageFilter, setStageFilter] = useState<PipelineStage | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<View>({ kind: "tracker" });
+  const [pasteEmailOpen, setPasteEmailOpen] = useState(false);
+
+  async function handleEmailFiled(opportunityId: string) {
+    // Refresh the opportunity list from the server (covers new opps + updated rows).
+    try {
+      const res = await fetch("/api/opportunities", { cache: "no-store" });
+      if (res.ok) {
+        const fresh = (await res.json()) as Opportunity[];
+        setOpportunities(fresh);
+      }
+    } catch {
+      router.refresh();
+    }
+    setSelectedId(opportunityId);
+    setView({ kind: "tracker" });
+  }
 
   const stageCounts = useMemo(() => {
     const counts = Object.fromEntries(
@@ -95,6 +112,7 @@ export function CRMApp({
       <div className="flex flex-col h-screen">
         <Header
           onNewOpportunity={() => setView({ kind: "new" })}
+          onPasteEmail={() => setPasteEmailOpen(true)}
           opportunityCount={opportunities.length}
         />
         <IntakeForm
@@ -118,6 +136,7 @@ export function CRMApp({
     <div className="flex flex-col h-screen">
       <Header
         onNewOpportunity={() => setView({ kind: "new" })}
+        onPasteEmail={() => setPasteEmailOpen(true)}
         opportunityCount={opportunities.length}
       />
       <PipelineFilter
@@ -150,6 +169,16 @@ export function CRMApp({
           />
         )}
       </div>
+
+      {pasteEmailOpen && (
+        <PasteEmailModal
+          onClose={() => setPasteEmailOpen(false)}
+          onFiled={async (opportunityId) => {
+            setPasteEmailOpen(false);
+            await handleEmailFiled(opportunityId);
+          }}
+        />
+      )}
     </div>
   );
 }

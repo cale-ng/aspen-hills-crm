@@ -88,6 +88,18 @@ async function saveMessage(
   return rowToStoredMessage(data as MessageRow);
 }
 
+/**
+ * Append a system-generated assistant message to the opportunity's chat
+ * (e.g., the summary + next steps after an email is filed). No Anthropic
+ * call — just a persisted note from the agent.
+ */
+export async function postAssistantNote(
+  opportunityId: string,
+  content: string
+): Promise<StoredMessage> {
+  return saveMessage(opportunityId, "assistant", content, null);
+}
+
 export async function clearMessages(opportunityId: string): Promise<void> {
   const supabase = supabaseServer();
   const { error } = await supabase

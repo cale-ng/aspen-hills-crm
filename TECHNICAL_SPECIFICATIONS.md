@@ -88,6 +88,8 @@ Aspen Hills CRM/
 | `GET /api/opportunities/[id]/agent` | Load the full conversation history for this opportunity |
 | `POST /api/opportunities/[id]/agent` | Send a new user message; server saves it, calls Anthropic with full history + context, saves the assistant reply, returns both |
 | `DELETE /api/opportunities/[id]/agent` | Clear the entire conversation for this opportunity |
+| `GET /api/opportunities` | List all opportunities (used for client-side refresh after email filing) |
+| `POST /api/inbound/email` | Paste an email; classifies + auto-files at high confidence, or returns candidates for user confirmation |
 
 Mutation logic + validation lives in `src/lib/mutations.ts` — route handlers are thin wrappers around it.
 

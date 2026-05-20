@@ -4,6 +4,39 @@
 
 ---
 
+## V0.7 — 2026-05-20 · Paste email → auto-classify + file (Aspen Agent inbox)
+
+**Summary**
+Built the paste-based email ingestion path from `APP_REQUIREMENTS §3b`. A new "📧 Paste email" button in the header opens a modal where Cale pastes any client email; the agent figures out which opportunity it belongs to, files the raw email as a `.eml` attachment under that opportunity, and posts a structured summary + suggested next steps to the opportunity's chat thread. High-confidence matches file automatically; lower-confidence ones present a candidate picker with "create new opportunity" as a fallback.
+
+**Changes**
+- New `src/lib/email.ts` — naive RFC822 header parser + Anthropic-backed classifier. Classifier sends all existing opportunities' identity fields (id, company, contact email, industry, stage) plus the email body, returns JSON with `confidence`, best-match `opportunityId`, `reasoning`, `summary`, `suggestedNextSteps[]`, `alternatives[]`, and `newOpportunity` extraction.
+- New `fileEmail()` helper: uploads raw email as `.eml` (kind=email) via existing `uploadAttachment`, then calls new `postAssistantNote()` in agent.ts to log the summary + next steps in the opportunity's persistent chat thread.
+- New route `POST /api/inbound/email` — single endpoint with classify-then-file logic. Body: `{ raw, forceOpportunityId?, createNew? }`. Auto-files at `confidence: "high"` with matched `opportunityId`; otherwise returns `{ status: "needs_confirmation", classification, parsed }`.
+- New route `GET /api/opportunities` — list endpoint for client-side refresh after email filing creates new rows.
+- New `src/lib/agent.ts → postAssistantNote()` — public helper to append a system-generated assistant message (no Anthropic call).
+- New `src/components/PasteEmailModal.tsx` — full modal UI: paste textarea → classify → success state OR confirmation state with candidate buttons + "Create new opportunity" option.
+- `src/components/Header.tsx` — adds "📧 Paste email" button next to "+ New Opportunity".
+- `src/components/CRMApp.tsx` — wires modal + refreshes opportunity list after filing + selects the filed opportunity in the tracker.
+
+**Files affected**
+- `src/lib/email.ts` (new)
+- `src/lib/agent.ts` (added `postAssistantNote`)
+- `src/app/api/inbound/email/route.ts` (new)
+- `src/app/api/opportunities/route.ts` (added GET)
+- `src/components/PasteEmailModal.tsx` (new)
+- `src/components/Header.tsx`, `src/components/CRMApp.tsx`
+- `APP_REQUIREMENTS.md`, `TECHNICAL_SPECIFICATIONS.md`, `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- Email parsing is naive — handles common Gmail/Outlook paste formats but not multipart MIME, encoded headers, or attachments-within-the-email. Pasted plain text body usually works fine.
+- Classifier confidence threshold is binary (only "high" auto-files). Worth tuning if "medium" turns out to be reliable in practice.
+- No deduplication — pasting the same email twice files it twice. Future enhancement: hash the body + check for prior identical attachment on the same opportunity.
+- The "next steps" land as text in the chat — they're discoverable but not yet structured (e.g., to render in a global "next actions queue" on the dashboard). That's V0.7.1 / V0.8 work.
+- V0.8 forwarding path (real inbound email via Postmark/Resend/Cloudflare) still pending — reuses the V0.7 classification + filing logic, only triggered by webhook instead of paste.
+
+---
+
 ## V0.6.4 — 2026-05-20 · Captured email ingestion + dashboard directions
 
 **Summary**

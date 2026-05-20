@@ -101,13 +101,14 @@ Forward any client email to the CRM and have the Aspen Agent file it under the r
 5. If ambiguous: queued for user review in a small "Needs filing" inbox
 
 ### Phased delivery
-- **V0.7 — Paste path**
-  - New "Paste email" button in the tracker header
-  - Modal: paste raw email content (headers + body)
+- ✅ **V0.7 — Paste path** (shipped 2026-05-20)
+  - "Paste email" button in the tracker header
+  - Modal: paste raw email content (headers + body, or just body)
   - Agent picks best-match opportunity (or proposes new)
-  - User confirms → filed + summarized + next steps queued
-  - **No email infrastructure required** — lets us validate the classification + summarization quality fast
-- **V0.8 — Forwarding path**
+  - **High confidence → auto-files** (raw email saved as `.eml` attachment, summary + next steps posted as assistant message in the opportunity's chat)
+  - Medium/low confidence → user picks from candidates or creates new opportunity
+  - **No email infrastructure required** — validates the classification + summarization quality before V0.8 forwarding work
+- **V0.8 — Forwarding path** (planned)
   - Provision an inbound address (e.g. `crm@aspenhills.com` via Postmark Inbound, Resend Inbound, or Cloudflare Email Workers)
   - Set MX records on the subdomain
   - Webhook endpoint: `POST /api/inbound/email`

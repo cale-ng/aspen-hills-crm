@@ -1,5 +1,16 @@
 import { NextResponse } from "next/server";
+import { listOpportunities } from "@/lib/data";
 import { createOpportunity, type OpportunityInput } from "@/lib/mutations";
+
+export async function GET() {
+  try {
+    const opportunities = await listOpportunities();
+    return NextResponse.json(opportunities);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   let body: OpportunityInput;

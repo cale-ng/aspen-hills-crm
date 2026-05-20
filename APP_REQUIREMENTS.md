@@ -2,7 +2,7 @@
 
 > Living document. Update as requirements evolve. The canonical product spec lives in [`docs/aspen_hills_crm_spec.md`](docs/aspen_hills_crm_spec.md) — this file summarizes and tracks the build state against it.
 
-**Last updated:** 2026-05-20 · **Version:** V0.5.1
+**Last updated:** 2026-05-20 · **Version:** V0.6
 
 ---
 
@@ -71,10 +71,10 @@ This is what makes pain/scope/notes "live" fields that grow with each conversati
 - [x] Tracker view: list opportunities with stage pill, fit dot, retainer estimate
 - [x] Pipeline stage filter bar (with per-stage counts)
 - [ ] Fit filter (Strong / Good / Weak / All)
-- [x] Detail panel: tabbed (Overview / Pricing & Equity / Sales Pitch / Files)
+- [x] Detail panel: tabbed (Overview / Agent / Pricing & Equity / Files)
   - [x] Overview tab rendered
-  - [ ] Pricing & Equity tab
-  - [ ] Sales Pitch tab
+  - [x] Agent tab (Aspen Agent: chat with full opportunity + context awareness; W4/W5 pitch + W7 meeting capture handled conversationally)
+  - [ ] Pricing & Equity tab (one-click AI pricing/equity estimator with structured render)
   - [x] Files tab (Context Library: typed uploads with kind/tag/note, view, delete)
 - [x] Inline stage selector on detail panel
 - [x] Intake form (new + edit + delete)
@@ -137,10 +137,10 @@ Beyond pure Q&A, surface proactive recommendations on the detail panel:
 ### Priority sequencing
 This is a **phase-2 effort**, not a v1 blocker. Likely sequencing once v1 ships:
 1. ✅ **V0.5** — extend the Files tab into a typed Context Library (kind tagging, basic text extraction on upload for text-based MIME types)
-2. V0.x+1: opportunity-scoped chat agent with simple full-context-stuffing (no embeddings yet)
-3. V0.x+2: proactive recommendations rendered on the detail panel
-4. V0.x+3: proposal/contract draft generators
-5. V0.x+4: extend text extraction to PDF + DOCX (pdf-parse + mammoth)
+2. ✅ **V0.6** — opportunity-scoped chat agent (Aspen Agent) with full-context-stuffing + prompt caching. Conversational Q&A, summaries, drafts, suggestions. No structured "apply to record" yet.
+3. V0.6.1: structured "apply to record" — agent proposes JSON changes (pain, scope, notes, stage), user accepts/rejects
+4. V0.7: proactive recommendations rendered on the detail panel (next action, risks, info gaps)
+5. V0.8: extend text extraction to PDF + DOCX (pdf-parse + mammoth) for richer context
 6. V1.x: pgvector-backed retrieval if context size demands it
 
 ---

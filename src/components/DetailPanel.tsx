@@ -6,13 +6,14 @@ import { PIPELINE_STAGES, STAGE_META } from "@/lib/types";
 import { StagePill } from "./ui/StagePill";
 import { FitDot } from "./ui/FitDot";
 import { FilesTab } from "./FilesTab";
+import { AgentTab } from "./AgentTab";
 
-type Tab = "overview" | "pricing" | "pitch" | "files";
+type Tab = "overview" | "agent" | "pricing" | "files";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
+  { id: "agent", label: "Agent" },
   { id: "pricing", label: "Pricing & Equity" },
-  { id: "pitch", label: "Sales Pitch" },
   { id: "files", label: "Files" },
 ];
 
@@ -91,8 +92,8 @@ export function DetailPanel({
         {tab === "overview" && (
           <OverviewTab opp={opportunity} onStageChange={onStageChange} />
         )}
+        {tab === "agent" && <AgentTab opportunityId={opportunity.id} />}
         {tab === "pricing" && <ComingSoon label="Pricing & Equity" />}
-        {tab === "pitch" && <ComingSoon label="Sales Pitch" />}
         {tab === "files" && <FilesTab opportunityId={opportunity.id} />}
       </div>
     </section>

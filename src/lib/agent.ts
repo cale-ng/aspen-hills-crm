@@ -1,0 +1,183 @@
+import "server-only";
+import Anthropic from "@anthropic-ai/sdk";
+import { getOpportunity, listAttachmentsByOpportunity } from "./data";
+import type { Attachment, Opportunity } from "./types";
+import { CONTEXT_KIND_META } from "./types";
+
+const DEFAULT_MODEL = "claude-sonnet-4-6";
+
+function client() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Missing ANTHROPIC_API_KEY. Add it to .env.local from console.anthropic.com → API Keys."
+    );
+  }
+  return new Anthropic({ apiKey });
+}
+
+export interface AgentMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * The Aspen Hills business context that frames every agent conversation.
+ * Cached in the prompt to minimize cost across messages.
+ */
+const ASPEN_HILLS_CONTEXT = `You are the Aspen Agent — an AI assistant embedded inside the Aspen Hills Advisors CRM. You help Cale (the founder) move sales opportunities forward.
+
+About Aspen Hills Advisors LLC:
+- Fractional supply chain operations and product development firm
+- Serves CPG brands in sports nutrition, health/wellness supplements, beverages, and functional foods
+- Typical client revenue: $3M–$15M
+- Core offering: plug-in fractional Director of Operations team (SCM + coordinator from day one)
+- Founder has ~13 years experience across NutriBolt, VShred/SculpNation, YourSuper
+- Key differentiators: deep category expertise, embedded team model, fast operational stand-up, strong manufacturer/3PL relationships, AI tooling layered into planning and visibility
+- Cost value prop: FT Supply Chain Manager = $120–150K + Coordinator $55–70K within 6–12 months. Aspen Hills delivers both from day one at fraction of FT cost
+- Blended rate: $175–275/hr depending on complexity and seniority mix
+- Pricing: light scope 15–20h/mo, moderate 20–30h/mo, heavy 30–45h/mo
+
+Your job:
+- Answer questions about this specific opportunity using the context provided
+- Summarize meeting transcripts when uploaded
+- Extract pain points, scope, decision-maker context, and stage signals
+- Suggest next steps, smart questions to ask, and risks to flag
+- Draft proposals, follow-up emails, and pitches when asked
+- Be concise, peer-level, operator-tone — Cale is busy and runs the firm
+
+When summarizing meetings, structure your response as:
+1. **Summary** — 2–3 sentence overview
+2. **Pain points raised** — bullet list
+3. **Scope discussed** — bullet list
+4. **Stage signals** — what stage does this conversation suggest?
+5. **Action items** — bullet list with owner (Cale / Client)
+6. **Suggested next steps** — bullet list of what to do next
+
+For general questions, just answer directly. Keep responses tight — no fluff.`;
+
+function formatOpportunityContext(opp: Opportunity): string {
+  const lines: string[] = [
+    `OPPORTUNITY: ${opp.company}`,
+    `Stage: ${opp.stage}`,
+    `Fit: ${opp.fit}`,
+  ];
+  if (opp.contactName || opp.contact) {
+    lines.push(`Contact: ${opp.contactName ?? opp.contact}`);
+  }
+  if (opp.email) lines.push(`Email: ${opp.email}`);
+  if (opp.phone) lines.push(`Phone: ${opp.phone}`);
+  if (opp.website) lines.push(`Website: ${opp.website}`);
+  if (opp.industry) lines.push(`Industry: ${opp.industry}`);
+  if (opp.revenue) lines.push(`Revenue/Stage: ${opp.revenue}`);
+  if (opp.retainerEst) lines.push(`Est. retainer: $${opp.retainerEst}/mo`);
+  if (opp.currentPain) lines.push(`\nCURRENT PAIN POINTS:\n${opp.currentPain}`);
+  if (opp.scopeNotes)  lines.push(`\nSCOPE NOTES:\n${opp.scopeNotes}`);
+  if (opp.notes)       lines.push(`\nADDITIONAL NOTES:\n${opp.notes}`);
+  if (opp.pitch)       lines.push(`\nEXISTING PITCH:\n${opp.pitch}`);
+  if (opp.pricing) {
+    lines.push(
+      `\nPRICING ESTIMATE: build $${opp.pricing.buildPhaseMonthly}/mo, steady $${opp.pricing.steadyStateMonthly}/mo, equity verdict: ${opp.pricing.equityTrigger.verdict}`
+    );
+  }
+  return lines.join("\n");
+}
+
+function formatAttachmentContext(attachments: Attachment[]): string {
+  if (attachments.length === 0) return "\n\nNo context artifacts uploaded yet.";
+
+  const sections: string[] = ["\n\nUPLOADED CONTEXT ARTIFACTS:"];
+  for (const a of attachments) {
+    const meta = CONTEXT_KIND_META[a.kind];
+    const header = [
+      `--- ${meta.label.toUpperCase()}: ${a.name}`,
+      a.tag ? `Tag: ${a.tag}` : null,
+      a.note ? `User note: ${a.note}` : null,
+      `Uploaded: ${new Date(a.createdAt).toLocaleString()}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    sections.push(header);
+    if (a.extractedText) {
+      sections.push(`\n${a.extractedText}\n`);
+    } else {
+      sections.push(
+        `[Binary file — content not extracted. The user may want to paste the text inline if relevant.]`
+      );
+    }
+    sections.push("---");
+  }
+  return sections.join("\n");
+}
+
+export interface AgentReplyResult {
+  reply: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+  };
+}
+
+export async function agentReply(
+  opportunityId: string,
+  messages: AgentMessage[]
+): Promise<AgentReplyResult> {
+  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
+    throw new Error("Conversation must end with a user message.");
+  }
+
+  const opp = await getOpportunity(opportunityId);
+  if (!opp) throw new Error(`Opportunity ${opportunityId} not found.`);
+
+  const attachments = await listAttachmentsByOpportunity(opportunityId);
+
+  const opportunityContext =
+    formatOpportunityContext(opp) + formatAttachmentContext(attachments);
+
+  const anthropic = client();
+  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
+
+  const response = await anthropic.messages.create({
+    model,
+    max_tokens: 2048,
+    system: [
+      // Static business context — cached across all opportunities/messages.
+      {
+        type: "text",
+        text: ASPEN_HILLS_CONTEXT,
+        cache_control: { type: "ephemeral" },
+      },
+      // Per-opportunity context — cached across messages within the same chat
+      // (lasts ~5 min before cache expires).
+      {
+        type: "text",
+        text: opportunityContext,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
+  });
+
+  // Extract text from the response (block content can be multiple text parts).
+  const reply = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("\n")
+    .trim();
+
+  return {
+    reply,
+    usage: {
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      cacheCreationTokens: response.usage.cache_creation_input_tokens ?? 0,
+      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+    },
+  };
+}

@@ -4,6 +4,38 @@
 
 ---
 
+## V0.6 — 2026-05-20 · Aspen Agent (conversational, context-aware)
+
+**Summary**
+Shipped the Aspen Agent — an opportunity-scoped conversational AI embedded in each detail panel. It has read access to every field on the opportunity plus all uploaded context (transcripts, emails, JDs, etc.) and can answer questions, summarize meetings, suggest next steps, draft follow-up emails or proposals, and flag risks. Replaces the originally-planned "Sales Pitch" tab — the agent handles pitches as one of its quick actions.
+
+**Changes**
+- New `src/lib/agent.ts` — Anthropic client + opportunity context builder. System prompt carries the Aspen Hills business context (cached via `cache_control: ephemeral`); a second cached block carries the opportunity-specific context (fields + extracted text from all attachments). User messages are uncached.
+- New route `POST /api/opportunities/[id]/agent` — accepts a `messages` array, returns `{ reply, usage }` with token + cache metrics
+- New `src/components/AgentTab.tsx` — chat-style UI with 6 quick-action buttons (summarize meeting, ask questions, suggest next steps, draft follow-up, draft proposal, flag risks). Enter to send, Shift+Enter for newline.
+- `src/components/DetailPanel.tsx` — tabs reordered to **Overview / Agent / Pricing & Equity / Files**. "Sales Pitch" tab removed (agent handles it).
+- `scripts/test-agent.ts` — Anthropic smoke test
+- Anthropic API key wired into `.env.local`
+
+**Files affected**
+- `src/lib/agent.ts` (new)
+- `src/app/api/opportunities/[id]/agent/route.ts` (new)
+- `src/components/AgentTab.tsx` (new)
+- `src/components/DetailPanel.tsx` (updated tabs)
+- `scripts/test-agent.ts` (new)
+- `.env.local` (untracked — Anthropic key added)
+- `APP_REQUIREMENTS.md` (Files tab + Agent tab marked complete; sequencing updated)
+- `TECHNICAL_SPECIFICATIONS.md` (new route, three new architectural decisions logged)
+- `VERSION_HISTORY.md` (this entry)
+
+**Known issues / pending**
+- Chat history is in-browser only — closing the detail panel loses the conversation. Persistence is a later decision (V0.6.x).
+- The agent's suggested field updates (pain points, scope, notes, stage) are surfaced as text in chat; user must manually copy/edit them into the Edit form. Structured "apply to record" is V0.6.1.
+- PDF/DOCX uploads still have no extracted_text — the agent will note this and ask the user to paste the relevant text inline if it matters.
+- Cost: each message sends full context. With prompt caching, follow-ups are ~10x cheaper than the first turn — but the first turn on a new opportunity can run a few cents if there's heavy transcript context.
+
+---
+
 ## V0.5.1 — 2026-05-20 · Intake form refinements + W7 workflow
 
 **Summary**

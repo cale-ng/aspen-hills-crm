@@ -2,7 +2,7 @@
 
 > Living document. Update any time the architecture or a major implementation decision changes.
 
-**Last updated:** 2026-05-19 · **Version:** V0.5
+**Last updated:** 2026-05-20 · **Version:** V0.6
 
 ---
 
@@ -85,6 +85,7 @@ Aspen Hills CRM/
 | `POST /api/opportunities/[id]/attachments` | Upload an attachment (multipart/form-data: `file`, `kind`, optional `tag` + `note`) |
 | `GET /api/attachments/[id]` | Get a short-lived signed URL (5 min) for viewing/downloading the file |
 | `DELETE /api/attachments/[id]` | Delete an attachment (removes Storage object + DB row) |
+| `POST /api/opportunities/[id]/agent` | Send a message to the Aspen Agent; returns reply + token usage |
 
 Mutation logic + validation lives in `src/lib/mutations.ts` — route handlers are thin wrappers around it.
 
@@ -114,6 +115,9 @@ Stored in `.env.local` (git-ignored). Template at `.env.local.example`.
 | Design tokens as CSS variables (not Tailwind config) | 2026-05-15 | Matches the source spec exactly; portable to other tools |
 | AI calls server-side only | 2026-05-15 | Anthropic key would otherwise leak to the browser |
 | Pricing stored as JSONB | 2026-05-15 | Nested structure (equity trigger, recommendation) doesn't justify separate tables for v1 |
+| Aspen Agent uses full-context stuffing + Anthropic prompt caching (no embeddings yet) | 2026-05-20 | Sonnet 4.6 has a 200K context window; all uploaded text per opportunity fits easily today. Caching the system prompt + opportunity context makes follow-up turns cheap. Adding embeddings/RAG only if a single opportunity exceeds context. |
+| Agent chat is in-browser ephemeral state (no DB persistence) | 2026-05-20 | Defers a `messages` table. Conversations are short-lived working sessions, not long-running threads. Add persistence in a later version if usage shows it matters. |
+| Agent tab replaces the originally-planned "Sales Pitch" tab | 2026-05-20 | The agent can draft pitches on demand (one of its quick actions); a dedicated pitch tab adds a redundant UI surface for the same capability. |
 
 ---
 

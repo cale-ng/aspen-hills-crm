@@ -4,6 +4,21 @@
 
 ---
 
+## V0.6.4 — 2026-05-20 · Captured email ingestion + dashboard directions
+
+**Summary**
+Documented two major upcoming features in `APP_REQUIREMENTS.md`:
+- **§3b Email Ingestion** — phased plan: V0.7 paste-based ingestion (no infra) → V0.8 real inbound email via Postmark/Resend/Cloudflare with webhook + MX records. Agent classifies which opportunity, files as email artifact, generates summary + next steps.
+- **§3c Dashboard** — `/dashboard` route with KPI strip, pipeline funnel, agent-generated "next actions queue", stale opportunity flags, plus retrospective views (contacts table, industry/role breakdowns, win/loss trends, conversion rate).
+
+No code changes — these are scope captures, not builds.
+
+**Files affected**
+- `APP_REQUIREMENTS.md` — added §3b (Email Ingestion) and §3c (Dashboard)
+- `VERSION_HISTORY.md` — this entry
+
+---
+
 ## V0.6.3 — 2026-05-20 · Persistent agent chat in the database
 
 **Summary**

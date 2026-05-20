@@ -4,6 +4,30 @@
 
 ---
 
+## V0.6.2 — 2026-05-20 · Attachments in agent chat + PDF/DOCX extraction
+
+**Summary**
+The agent composer now accepts file attachments — drag/drop into the chat or click the 📎 button. Attached files are uploaded to the Context Library (with auto-detected kind, tag "from chat") and the agent reads them in its reply. Also added PDF and DOCX text extraction so the agent can actually understand those uploads (previously only plain-text uploads got extracted).
+
+**Changes**
+- Installed `unpdf` (for PDF) and `mammoth` (for DOCX); both extract server-side during upload
+- `src/lib/attachments.ts` — new `extractText()` helper dispatches by MIME type (text-based / PDF / DOCX) with graceful fallback to `NULL` on parse failure
+- `src/components/AgentTab.tsx` — composer now has 📎 button + drag/drop overlay; pending files show as removable chips; user message bubbles show attached file names with a green dot indicating "text extracted, agent can read this"
+- Auto-prompt: if user sends files with no typed message, generates "I've attached: …. Please review and tell me what's useful, then suggest next steps." so the agent has something to react to
+- Chat-attached files default to `tag: "from chat"` for easy filtering later
+
+**Files affected**
+- `src/lib/attachments.ts`, `src/components/AgentTab.tsx`
+- `package.json`, `package-lock.json`
+- `DATA_DICTIONARY.md`, `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- Image vision not yet implemented — images upload as attachments but the agent only sees metadata, not pixels. Could send images as Anthropic vision blocks in a later version.
+- Excel (.xlsx) and PowerPoint (.pptx) still have no text extraction.
+- PDF extraction relies on `unpdf` (uses Mozilla pdfjs). For scanned-image PDFs with no text layer, extraction will be empty. Needs OCR (Tesseract / cloud OCR) for those — future work.
+
+---
+
 ## V0.6.1 — 2026-05-20 · Persist agent chat per opportunity
 
 **Summary**

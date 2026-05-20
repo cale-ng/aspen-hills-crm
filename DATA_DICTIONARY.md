@@ -111,7 +111,7 @@ Files attached to an opportunity. Actual file bytes live in Supabase Storage; th
 | `kind` | `text` | no | `'other'` | Context type. Check constraint: `transcript \| email \| job_description \| deck \| document \| image \| other` |
 | `tag` | `text` | yes | — | Short free-text label (e.g. "intro call · 2026-05-10") |
 | `note` | `text` | yes | — | Longer user-written description of the artifact |
-| `extracted_text` | `text` | yes | — | Plain text extracted from text-based uploads (capped at 200K chars). Used by the Aspen Agent for RAG/context. Currently populated only for `text/*`, `application/json`, `application/xml`, `application/x-yaml`, `message/rfc822` MIME types. PDF/DOCX extraction is a future enhancement. |
+| `extracted_text` | `text` | yes | — | Plain text extracted from uploads (capped at 200K chars). Used by the Aspen Agent for context. Populated for: `text/*`, `application/json`, `application/xml`, `application/x-yaml`, `message/rfc822` (via UTF-8 decode); `application/pdf` (via `unpdf`); `application/vnd.openxmlformats-officedocument.wordprocessingml.document` (via `mammoth`). Other binary types (images, .pptx, .xlsx) remain `NULL` for now. |
 | `created_at` | `timestamptz` | no | `now()` | Upload timestamp |
 
 ### Indexes

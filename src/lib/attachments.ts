@@ -10,6 +10,7 @@ import {
 
 export const STORAGE_BUCKET = "attachments";
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_EXTRACTED_CHARS = 200_000;
 
 /** MIME types treated as plain text for inline extraction. */
 const TEXT_LIKE_PREFIXES = ["text/"];
@@ -20,10 +21,64 @@ const TEXT_LIKE_EXACT = new Set([
   "message/rfc822", // .eml
 ]);
 
+const PDF_MIME = "application/pdf";
+const DOCX_MIME =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
 function isTextLike(mime: string | undefined): boolean {
   if (!mime) return false;
   if (TEXT_LIKE_EXACT.has(mime)) return true;
   return TEXT_LIKE_PREFIXES.some((p) => mime.startsWith(p));
+}
+
+async function extractPdfText(buf: Buffer): Promise<string | null> {
+  try {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buf));
+    const { text } = await extractText(pdf, { mergePages: true });
+    const joined = Array.isArray(text) ? text.join("\n\n") : text;
+    return joined.trim() || null;
+  } catch (err) {
+    console.warn(
+      `PDF extraction failed: ${err instanceof Error ? err.message : err}`
+    );
+    return null;
+  }
+}
+
+async function extractDocxText(buf: Buffer): Promise<string | null> {
+  try {
+    const mammoth = (await import("mammoth")).default;
+    const { value } = await mammoth.extractRawText({ buffer: buf });
+    return value.trim() || null;
+  } catch (err) {
+    console.warn(
+      `DOCX extraction failed: ${err instanceof Error ? err.message : err}`
+    );
+    return null;
+  }
+}
+
+async function extractText(buf: Buffer, mime: string | undefined): Promise<string | null> {
+  if (!mime) return null;
+  let text: string | null = null;
+
+  if (isTextLike(mime)) {
+    try {
+      text = buf.toString("utf-8");
+    } catch {
+      text = null;
+    }
+  } else if (mime === PDF_MIME) {
+    text = await extractPdfText(buf);
+  } else if (mime === DOCX_MIME) {
+    text = await extractDocxText(buf);
+  }
+
+  if (!text) return null;
+  return text.length > MAX_EXTRACTED_CHARS
+    ? text.slice(0, MAX_EXTRACTED_CHARS)
+    : text;
 }
 
 function extOf(filename: string): string {
@@ -78,15 +133,9 @@ export async function uploadAttachment(input: UploadInput): Promise<Attachment> 
     throw new Error(`Storage upload failed: ${storageError.message}`);
   }
 
-  // Inline text extraction for text-based MIME types.
-  let extractedText: string | null = null;
-  if (isTextLike(file.type)) {
-    try {
-      extractedText = buf.toString("utf-8").slice(0, 200_000); // cap at 200K chars
-    } catch {
-      extractedText = null;
-    }
-  }
+  // Inline text extraction. Handles text-based MIME types, PDFs (via unpdf),
+  // and DOCX (via mammoth). Unknown binary types stay null.
+  const extractedText = await extractText(buf, file.type);
 
   // Insert metadata row.
   const { data, error } = await supabase

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Opportunity } from "@/lib/types";
+import type { Opportunity, PipelineStage } from "@/lib/types";
+import { PIPELINE_STAGES, STAGE_META } from "@/lib/types";
 import { StagePill } from "./ui/StagePill";
 import { FitDot } from "./ui/FitDot";
 
@@ -17,9 +18,13 @@ const TABS: { id: Tab; label: string }[] = [
 export function DetailPanel({
   opportunity,
   onClose,
+  onEdit,
+  onStageChange,
 }: {
   opportunity: Opportunity;
   onClose: () => void;
+  onEdit: () => void;
+  onStageChange: (stage: PipelineStage) => void;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -43,13 +48,21 @@ export function DetailPanel({
             <StagePill stage={opportunity.stage} />
           </div>
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="text-text-muted hover:text-text-primary text-xl leading-none px-2"
-        >
-          ×
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="px-3 py-1.5 text-xs uppercase tracking-wider rounded-md text-text-muted hover:text-text-primary transition-colors border border-border-default"
+          >
+            Edit
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-text-muted hover:text-text-primary text-xl leading-none px-2"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -74,7 +87,9 @@ export function DetailPanel({
 
       {/* Body */}
       <div className="flex-1 overflow-auto p-6">
-        {tab === "overview" && <OverviewTab opp={opportunity} />}
+        {tab === "overview" && (
+          <OverviewTab opp={opportunity} onStageChange={onStageChange} />
+        )}
         {tab === "pricing" && <ComingSoon label="Pricing & Equity" />}
         {tab === "pitch" && <ComingSoon label="Sales Pitch" />}
         {tab === "files" && <ComingSoon label="Files" />}
@@ -83,13 +98,56 @@ export function DetailPanel({
   );
 }
 
-function OverviewTab({ opp }: { opp: Opportunity }) {
+function OverviewTab({
+  opp,
+  onStageChange,
+}: {
+  opp: Opportunity;
+  onStageChange: (stage: PipelineStage) => void;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <InfoGrid opp={opp} />
+      <StageSelector current={opp.stage} onChange={onStageChange} />
       <Block label="Pain points" body={opp.currentPain} />
       <Block label="Scope notes" body={opp.scopeNotes} />
       <Block label="Notes" body={opp.notes} />
+    </div>
+  );
+}
+
+function StageSelector({
+  current,
+  onChange,
+}: {
+  current: PipelineStage;
+  onChange: (stage: PipelineStage) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[10px] uppercase tracking-[0.2em] text-text-dim">
+        Pipeline Stage
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {PIPELINE_STAGES.map((s) => {
+          const meta = STAGE_META[s];
+          const active = current === s;
+          return (
+            <button
+              key={s}
+              onClick={() => !active && onChange(s)}
+              className="px-2.5 py-1 text-[10px] uppercase tracking-wider rounded-md transition-all"
+              style={{
+                color: active ? meta.color : "var(--text-muted)",
+                backgroundColor: active ? meta.tint : "transparent",
+                border: `1px solid ${active ? meta.color + "55" : "var(--border-subtle)"}`,
+              }}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

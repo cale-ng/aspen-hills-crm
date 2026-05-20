@@ -2,7 +2,7 @@
 
 > Living document. Update any time the architecture or a major implementation decision changes.
 
-**Last updated:** 2026-05-15 · **Version:** V0.2
+**Last updated:** 2026-05-19 · **Version:** V0.3
 
 ---
 
@@ -74,6 +74,15 @@ Aspen Hills CRM/
 - Reads happen in **Server Components** via `src/lib/data.ts`.
 - Writes happen in **Route Handlers** under `src/app/api/...` (server-side, can use service-role key).
 - AI calls happen **server-side only** — Anthropic API key is never exposed to the browser.
+
+### Route handlers (current)
+| Method + path | Purpose |
+|---|---|
+| `POST /api/opportunities` | Create an opportunity |
+| `PATCH /api/opportunities/[id]` | Update one or more fields (used by intake form + inline stage selector) |
+| `DELETE /api/opportunities/[id]` | Delete an opportunity |
+
+Mutation logic + validation lives in `src/lib/mutations.ts` — route handlers are thin wrappers around it.
 
 ---
 

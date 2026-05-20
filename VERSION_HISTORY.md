@@ -4,6 +4,33 @@
 
 ---
 
+## V0.3 — 2026-05-19 · Intake form (create, edit, delete) + inline stage selector
+
+**Summary**
+Built the intake form so opportunities can be created, edited, and deleted entirely in the UI. Added an inline stage selector to the detail panel for quick pipeline moves without opening the edit form.
+
+**Changes**
+- New `src/lib/mutations.ts` — validation + Supabase write helpers (`createOpportunity`, `updateOpportunity`, `deleteOpportunity`)
+- New route handlers: `POST /api/opportunities`, `PATCH /api/opportunities/[id]`, `DELETE /api/opportunities/[id]`
+- New `src/components/IntakeForm.tsx` — full intake form with all fields from spec §4 (excluding attachments — those land in V0.5)
+- `CRMApp` now manages three view modes: `tracker`, `new`, `edit` — and applies optimistic updates on stage change
+- `DetailPanel` gained an Edit button and an inline stage selector inside the Overview tab
+- Acceptance criteria W1 (create) and W3 (update stage) now pass
+
+**Files affected**
+- `src/lib/mutations.ts` (new)
+- `src/app/api/opportunities/route.ts`, `src/app/api/opportunities/[id]/route.ts` (new)
+- `src/components/IntakeForm.tsx` (new)
+- `src/components/CRMApp.tsx`, `src/components/DetailPanel.tsx` (updated)
+- `APP_REQUIREMENTS.md`, `TECHNICAL_SPECIFICATIONS.md`, `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- No automated tests for the new mutation paths — manual smoke test only
+- Attachments still pending (V0.5 / Context Library)
+- AI features still gated on Anthropic API key
+
+---
+
 ## V0.2a — 2026-05-15 · Captured Context Library + Aspen Agent direction
 
 **Summary**

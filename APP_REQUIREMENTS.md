@@ -2,7 +2,7 @@
 
 > Living document. Update as requirements evolve. The canonical product spec lives in [`docs/aspen_hills_crm_spec.md`](docs/aspen_hills_crm_spec.md) — this file summarizes and tracks the build state against it.
 
-**Last updated:** 2026-05-15 · **Version:** V0.2
+**Last updated:** 2026-05-19 · **Version:** V0.3
 
 ---
 
@@ -59,8 +59,8 @@ Internal CRM for **Aspen Hills Advisors LLC** to track inbound and outbound sale
   - [ ] Pricing & Equity tab
   - [ ] Sales Pitch tab
   - [ ] Files tab
-- [ ] Inline stage selector on detail panel
-- [ ] Intake form (new + edit)
+- [x] Inline stage selector on detail panel
+- [x] Intake form (new + edit + delete)
 - [ ] AI pitch generation (server-side `/api/opportunities/:id/pitch`)
 - [ ] AI pricing/equity generation (server-side `/api/opportunities/:id/pricing`)
 - [ ] File attachments via Supabase Storage (max 10MB, PDF/PNG/JPG/JPEG/WEBP/DOCX/XLSX)

@@ -4,6 +4,26 @@
 
 ---
 
+## V0.6.1 — 2026-05-20 · Persist agent chat per opportunity
+
+**Summary**
+Fixed the V0.6 issue where switching tabs (or refreshing) lost the agent conversation. Chat history now persists in `localStorage` keyed by opportunity ID — each opportunity has its own thread that survives tab switches, panel close/reopen, and page refresh.
+
+**Changes**
+- `src/components/AgentTab.tsx` — hydrates messages from `localStorage` on mount; saves on every change; re-loads when `opportunityId` changes
+- Added **"+ New chat"** button (shown when a conversation exists) to clear and start fresh
+- Storage key: `aspen-agent-chat:{opportunityId}` — easy to inspect or clear via browser devtools
+
+**Files affected**
+- `src/components/AgentTab.tsx`
+- `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- Persistence is browser-local — opening the CRM on another device won't show the prior thread. DB persistence (a `messages` table) deferred until usage signals it matters.
+- Conversations persist forever (no TTL). The localStorage cap (~5MB per origin) is plenty for many opportunities × many turns, but worth a future "prune old" pass.
+
+---
+
 ## V0.6 — 2026-05-20 · Aspen Agent (conversational, context-aware)
 
 **Summary**

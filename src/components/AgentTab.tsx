@@ -4,6 +4,40 @@ import { useEffect, useRef, useState } from "react";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+const STORAGE_PREFIX = "aspen-agent-chat:";
+
+function storageKey(opportunityId: string) {
+  return `${STORAGE_PREFIX}${opportunityId}`;
+}
+
+function loadMessages(opportunityId: string): Message[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(storageKey(opportunityId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Message[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(opportunityId: string, messages: Message[]) {
+  if (typeof window === "undefined") return;
+  try {
+    if (messages.length === 0) {
+      window.localStorage.removeItem(storageKey(opportunityId));
+    } else {
+      window.localStorage.setItem(
+        storageKey(opportunityId),
+        JSON.stringify(messages)
+      );
+    }
+  } catch {
+    // Quota exceeded or storage disabled — fail silently.
+  }
+}
+
 const QUICK_ACTIONS: { label: string; prompt: string }[] = [
   {
     label: "Summarize latest meeting",
@@ -38,16 +72,37 @@ const QUICK_ACTIONS: { label: string; prompt: string }[] = [
 ];
 
 export function AgentTab({ opportunityId }: { opportunityId: string }) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Initialize from localStorage so chat survives tab switches + page refreshes.
+  const [messages, setMessages] = useState<Message[]>(() =>
+    loadMessages(opportunityId)
+  );
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const endRef = useRef<HTMLDivElement>(null);
 
+  // Reload conversation if the user switches to a different opportunity.
+  useEffect(() => {
+    setMessages(loadMessages(opportunityId));
+    setError(null);
+    setInput("");
+  }, [opportunityId]);
+
+  // Persist on every change.
+  useEffect(() => {
+    saveMessages(opportunityId, messages);
+  }, [opportunityId, messages]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, pending]);
+
+  function clearChat() {
+    if (messages.length > 0 && !confirm("Clear this conversation?")) return;
+    setMessages([]);
+    setError(null);
+  }
 
   async function send(text: string) {
     const trimmed = text.trim();
@@ -137,17 +192,31 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
 
       {/* Conversation */}
       {messages.length > 0 && (
-        <div className="flex-1 overflow-auto px-6 py-4 flex flex-col gap-4">
-          {messages.map((m, i) => (
-            <MessageBubble key={i} role={m.role} content={m.content} />
-          ))}
-          {pending && (
-            <div className="text-text-muted text-xs italic">
-              Aspen Agent is thinking…
-            </div>
-          )}
-          <div ref={endRef} />
-        </div>
+        <>
+          <div className="flex items-center justify-between px-6 pt-4 pb-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-text-dim">
+              Conversation
+            </span>
+            <button
+              type="button"
+              onClick={clearChat}
+              className="text-[10px] uppercase tracking-wider text-text-muted hover:text-text-primary"
+            >
+              + New chat
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto px-6 pb-4 flex flex-col gap-4">
+            {messages.map((m, i) => (
+              <MessageBubble key={i} role={m.role} content={m.content} />
+            ))}
+            {pending && (
+              <div className="text-text-muted text-xs italic">
+                Aspen Agent is thinking…
+              </div>
+            )}
+            <div ref={endRef} />
+          </div>
+        </>
       )}
 
       {error && (

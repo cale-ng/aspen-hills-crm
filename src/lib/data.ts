@@ -1,8 +1,11 @@
 import "server-only";
 import { supabaseServer } from "./supabase/server";
 import {
+  type Attachment,
+  type AttachmentRow,
   type Opportunity,
   type OpportunityRow,
+  rowToAttachment,
   rowToOpportunity,
 } from "./types";
 import { SEED_OPPORTUNITIES } from "./seed";
@@ -47,4 +50,41 @@ export async function getOpportunity(id: string): Promise<Opportunity | null> {
 
   if (error) throw new Error(`getOpportunity: ${error.message}`);
   return data ? rowToOpportunity(data as OpportunityRow) : null;
+}
+
+export async function listAttachmentsByOpportunity(
+  opportunityId: string
+): Promise<Attachment[]> {
+  if (!supabaseConfigured()) return [];
+
+  const supabase = supabaseServer();
+  const { data, error } = await supabase
+    .from("attachments")
+    .select("*")
+    .eq("opportunity_id", opportunityId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`listAttachmentsByOpportunity: ${error.message}`);
+  return (data as AttachmentRow[]).map(rowToAttachment);
+}
+
+export async function listAllAttachments(): Promise<
+  Record<string, Attachment[]>
+> {
+  if (!supabaseConfigured()) return {};
+
+  const supabase = supabaseServer();
+  const { data, error } = await supabase
+    .from("attachments")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`listAllAttachments: ${error.message}`);
+
+  const grouped: Record<string, Attachment[]> = {};
+  for (const row of (data as AttachmentRow[])) {
+    const att = rowToAttachment(row);
+    (grouped[att.opportunityId] ??= []).push(att);
+  }
+  return grouped;
 }

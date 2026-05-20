@@ -4,6 +4,37 @@
 
 ---
 
+## V0.5 — 2026-05-19 · Context Library (file uploads with typed kinds)
+
+**Summary**
+Extended the v1 Files tab into the typed **Context Library** described in `APP_REQUIREMENTS.md §3a`. Each opportunity can now collect transcripts, emails, JDs, decks, documents, and images — each tagged with a kind, optional tag, and free-form note. Text-based uploads (`text/*`, JSON, XML, YAML, .eml) get their content extracted into `attachments.extracted_text` so the future Aspen Agent has retrievable context. PDF/DOCX extraction deferred.
+
+**Changes**
+- DB migration `supabase/migrations/0002_context_library.sql` — adds `kind`, `tag`, `note`, `extracted_text` to `attachments`; new `attachments_kind_idx`
+- New `src/lib/attachments.ts` — Supabase Storage upload/delete + signed URL helpers, inline text extraction for text-based MIME types, 10MB enforcement
+- New routes: `GET`/`POST /api/opportunities/[id]/attachments`, `GET`/`DELETE /api/attachments/[id]`
+- New `src/components/FilesTab.tsx` — drag-and-drop upload zone, kind picker (with auto-suggest from filename/MIME), tag + note fields, attachment list with view/delete actions
+- `src/lib/data.ts` extended with `listAttachmentsByOpportunity` + `listAllAttachments`
+- `src/lib/types.ts` extended with `ContextKind`, `CONTEXT_KIND_META`, and `Attachment` fields (`kind`, `tag`, `note`, `extractedText`)
+- `DetailPanel` Files tab now renders the live FilesTab component (previously stubbed)
+
+**Files affected**
+- `supabase/migrations/0002_context_library.sql` (new)
+- `src/lib/attachments.ts` (new)
+- `src/components/FilesTab.tsx` (new)
+- `src/app/api/opportunities/[id]/attachments/route.ts` (new)
+- `src/app/api/attachments/[id]/route.ts` (new)
+- `src/lib/data.ts`, `src/lib/types.ts`, `src/components/DetailPanel.tsx` (updated)
+- `DATA_DICTIONARY.md`, `APP_REQUIREMENTS.md`, `TECHNICAL_SPECIFICATIONS.md`, `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- PDF / DOCX text extraction not yet implemented — `extracted_text` is NULL for those uploads. Add `pdf-parse` + `mammoth` in a later pass.
+- No virus scanning on uploads (single-tenant tool, acceptable risk for v1).
+- Aspen Agent itself not built yet — V0.6 work, gated on Anthropic API key.
+- User must apply `0002_context_library.sql` in Supabase SQL editor before uploads will work.
+
+---
+
 ## V0.3 — 2026-05-19 · Intake form (create, edit, delete) + inline stage selector
 
 **Summary**

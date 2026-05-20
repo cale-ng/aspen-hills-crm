@@ -5,6 +5,7 @@ import type { Opportunity, PipelineStage } from "@/lib/types";
 import { PIPELINE_STAGES, STAGE_META } from "@/lib/types";
 import { StagePill } from "./ui/StagePill";
 import { FitDot } from "./ui/FitDot";
+import { FilesTab } from "./FilesTab";
 
 type Tab = "overview" | "pricing" | "pitch" | "files";
 
@@ -92,7 +93,7 @@ export function DetailPanel({
         )}
         {tab === "pricing" && <ComingSoon label="Pricing & Equity" />}
         {tab === "pitch" && <ComingSoon label="Sales Pitch" />}
-        {tab === "files" && <ComingSoon label="Files" />}
+        {tab === "files" && <FilesTab opportunityId={opportunity.id} />}
       </div>
     </section>
   );

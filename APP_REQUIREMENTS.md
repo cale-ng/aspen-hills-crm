@@ -2,7 +2,7 @@
 
 > Living document. Update as requirements evolve. The canonical product spec lives in [`docs/aspen_hills_crm_spec.md`](docs/aspen_hills_crm_spec.md) — this file summarizes and tracks the build state against it.
 
-**Last updated:** 2026-05-19 · **Version:** V0.3
+**Last updated:** 2026-05-19 · **Version:** V0.5
 
 ---
 
@@ -58,7 +58,7 @@ Internal CRM for **Aspen Hills Advisors LLC** to track inbound and outbound sale
   - [x] Overview tab rendered
   - [ ] Pricing & Equity tab
   - [ ] Sales Pitch tab
-  - [ ] Files tab
+  - [x] Files tab (Context Library: typed uploads with kind/tag/note, view, delete)
 - [x] Inline stage selector on detail panel
 - [x] Intake form (new + edit + delete)
 - [ ] AI pitch generation (server-side `/api/opportunities/:id/pitch`)
@@ -119,11 +119,12 @@ Beyond pure Q&A, surface proactive recommendations on the detail panel:
 
 ### Priority sequencing
 This is a **phase-2 effort**, not a v1 blocker. Likely sequencing once v1 ships:
-1. V0.x: extend the Files tab into a typed Context Library (kind tagging, text extraction on upload)
+1. ✅ **V0.5** — extend the Files tab into a typed Context Library (kind tagging, basic text extraction on upload for text-based MIME types)
 2. V0.x+1: opportunity-scoped chat agent with simple full-context-stuffing (no embeddings yet)
 3. V0.x+2: proactive recommendations rendered on the detail panel
 4. V0.x+3: proposal/contract draft generators
-5. V1.x: pgvector-backed retrieval if context size demands it
+5. V0.x+4: extend text extraction to PDF + DOCX (pdf-parse + mammoth)
+6. V1.x: pgvector-backed retrieval if context size demands it
 
 ---
 

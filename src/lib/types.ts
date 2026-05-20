@@ -76,6 +76,38 @@ export interface PricingEstimate {
   warnings: string[];
 }
 
+export type ContextKind =
+  | "transcript"
+  | "email"
+  | "job_description"
+  | "deck"
+  | "document"
+  | "image"
+  | "other";
+
+export const CONTEXT_KIND_META: Record<
+  ContextKind,
+  { label: string; icon: string }
+> = {
+  transcript:      { label: "Meeting transcript", icon: "🎙" },
+  email:           { label: "Email",              icon: "✉" },
+  job_description: { label: "Job description",    icon: "📋" },
+  deck:            { label: "Pitch deck",         icon: "🎴" },
+  document:        { label: "Document",           icon: "📄" },
+  image:           { label: "Image",              icon: "🖼" },
+  other:           { label: "Other",              icon: "📎" },
+};
+
+export const CONTEXT_KINDS: ContextKind[] = [
+  "transcript",
+  "email",
+  "job_description",
+  "deck",
+  "document",
+  "image",
+  "other",
+];
+
 export interface Attachment {
   id: string;
   opportunityId: string;
@@ -84,7 +116,43 @@ export interface Attachment {
   sizeBytes: number | null;
   storagePath: string | null;
   isReference: boolean;
+  kind: ContextKind;
+  tag: string | null;
+  note: string | null;
+  extractedText: string | null;
   createdAt: string;
+}
+
+export interface AttachmentRow {
+  id: string;
+  opportunity_id: string;
+  name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  storage_path: string | null;
+  is_reference: boolean;
+  kind: ContextKind;
+  tag: string | null;
+  note: string | null;
+  extracted_text: string | null;
+  created_at: string;
+}
+
+export function rowToAttachment(row: AttachmentRow): Attachment {
+  return {
+    id: row.id,
+    opportunityId: row.opportunity_id,
+    name: row.name,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    storagePath: row.storage_path,
+    isReference: row.is_reference,
+    kind: row.kind,
+    tag: row.tag,
+    note: row.note,
+    extractedText: row.extracted_text,
+    createdAt: row.created_at,
+  };
 }
 
 export interface Opportunity {

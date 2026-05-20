@@ -2,7 +2,7 @@
 
 > Living document. Update any time the architecture or a major implementation decision changes.
 
-**Last updated:** 2026-05-19 · **Version:** V0.3
+**Last updated:** 2026-05-19 · **Version:** V0.5
 
 ---
 
@@ -81,6 +81,10 @@ Aspen Hills CRM/
 | `POST /api/opportunities` | Create an opportunity |
 | `PATCH /api/opportunities/[id]` | Update one or more fields (used by intake form + inline stage selector) |
 | `DELETE /api/opportunities/[id]` | Delete an opportunity |
+| `GET /api/opportunities/[id]/attachments` | List attachments for an opportunity |
+| `POST /api/opportunities/[id]/attachments` | Upload an attachment (multipart/form-data: `file`, `kind`, optional `tag` + `note`) |
+| `GET /api/attachments/[id]` | Get a short-lived signed URL (5 min) for viewing/downloading the file |
+| `DELETE /api/attachments/[id]` | Delete an attachment (removes Storage object + DB row) |
 
 Mutation logic + validation lives in `src/lib/mutations.ts` — route handlers are thin wrappers around it.
 

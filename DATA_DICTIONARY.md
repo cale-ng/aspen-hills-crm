@@ -2,9 +2,12 @@
 
 > Living document. Update whenever a table, column, or storage bucket is added or modified. Source of truth: [`supabase/schema.sql`](supabase/schema.sql).
 
-**Last updated:** 2026-05-15 · **Version:** V0.2
+**Last updated:** 2026-05-19 · **Version:** V0.5
 
-**Schema status:** Live in Supabase project `vzoiqclipckfxiihvxlh`. Applied via `supabase/reset.sql` after an initial half-applied state from `supabase/schema.sql`. Going forward, use `reset.sql` as the authoritative recreate; treat any future column change as a numbered migration in `supabase/migrations/`.
+**Schema status:** Live in Supabase project `vzoiqclipckfxiihvxlh`. Originally applied via `supabase/reset.sql`. Subsequent column changes are tracked as numbered migrations in `supabase/migrations/` and applied by pasting into the Supabase SQL editor.
+
+**Applied migrations:**
+- `0002_context_library.sql` — adds `kind`, `tag`, `note`, `extracted_text` to `attachments`
 
 ---
 
@@ -101,10 +104,15 @@ Files attached to an opportunity. Actual file bytes live in Supabase Storage; th
 | `size_bytes` | `bigint` | yes | — | File size in bytes |
 | `storage_path` | `text` | yes | — | Path inside the `attachments` bucket (e.g. `<opp_id>/<file_id>.pdf`) |
 | `is_reference` | `boolean` | no | `false` | True = metadata only (e.g. a JD link), no file uploaded |
+| `kind` | `text` | no | `'other'` | Context type. Check constraint: `transcript \| email \| job_description \| deck \| document \| image \| other` |
+| `tag` | `text` | yes | — | Short free-text label (e.g. "intro call · 2026-05-10") |
+| `note` | `text` | yes | — | Longer user-written description of the artifact |
+| `extracted_text` | `text` | yes | — | Plain text extracted from text-based uploads (capped at 200K chars). Used by the Aspen Agent for RAG/context. Currently populated only for `text/*`, `application/json`, `application/xml`, `application/x-yaml`, `message/rfc822` MIME types. PDF/DOCX extraction is a future enhancement. |
 | `created_at` | `timestamptz` | no | `now()` | Upload timestamp |
 
 ### Indexes
 - `attachments_opportunity_idx` on `(opportunity_id)`
+- `attachments_kind_idx` on `(kind)`
 
 ---
 

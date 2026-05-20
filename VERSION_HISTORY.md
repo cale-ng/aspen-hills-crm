@@ -4,6 +4,36 @@
 
 ---
 
+## V0.6.3 — 2026-05-20 · Persistent agent chat in the database
+
+**Summary**
+Moved agent conversations from browser localStorage into Supabase so they survive device changes, browser changes, cache clears, and time. Each opportunity now has its own permanent chat log — open it from any device and continue the deep-dive where you left off. Reverses the V0.6 "in-browser ephemeral" decision based on actual usage signal.
+
+**Changes**
+- New migration `supabase/migrations/0004_agent_messages.sql` — creates `opportunity_messages` table (id, opportunity_id FK with cascade, role, content, attachments JSONB, created_at) + index on `(opportunity_id, created_at)`
+- `src/lib/agent.ts` — adds `listMessages()`, `clearMessages()`, internal `saveMessage()`; `agentReply()` now takes a single `{ opportunityId, content, attachments }` input. It persists the user message first, loads full history from DB, calls Anthropic, then saves the assistant reply. Rolls back the user message if Anthropic fails so the conversation isn't left dangling.
+- API route changes (`/api/opportunities/[id]/agent`):
+  - **GET** — return `{ messages }` (full history, ordered)
+  - **POST** — new body shape `{ content, attachments? }`; returns `{ userMessage, assistantMessage, usage }`
+  - **DELETE** — clear all messages for the opportunity
+- `src/components/AgentTab.tsx` — fetches history from server on mount instead of localStorage; renders optimistic user message while waiting for reply; "New chat" button hits DELETE
+- localStorage code removed entirely
+
+**Files affected**
+- `supabase/migrations/0004_agent_messages.sql` (new)
+- `src/lib/agent.ts`
+- `src/app/api/opportunities/[id]/agent/route.ts`
+- `src/components/AgentTab.tsx`
+- `DATA_DICTIONARY.md`, `TECHNICAL_SPECIFICATIONS.md`, `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- User must apply `0004_agent_messages.sql` in Supabase SQL editor before chat works
+- Existing localStorage conversations (from V0.6 / V0.6.1) are discarded — they were limited to recent testing
+- No conversation summarization or pruning yet — very long threads will eventually push the model context limit. Prompt caching mitigates cost. Add summarization later if any single opportunity grows past ~100K tokens of history.
+- No conversation search or "jump to date" — would be useful for long threads. Future polish.
+
+---
+
 ## V0.6.2 — 2026-05-20 · Attachments in agent chat + PDF/DOCX extraction
 
 **Summary**

@@ -1,6 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getOpportunity, listAttachmentsByOpportunity } from "./data";
+import { supabaseServer } from "./supabase/server";
 import type { Attachment, Opportunity } from "./types";
 import { CONTEXT_KIND_META } from "./types";
 
@@ -16,9 +17,84 @@ function client() {
   return new Anthropic({ apiKey });
 }
 
+export interface AttachmentRef {
+  id: string;
+  name: string;
+  kind: string;
+  extracted: boolean;
+}
+
 export interface AgentMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+export interface StoredMessage extends AgentMessage {
+  id: string;
+  attachments: AttachmentRef[] | null;
+  createdAt: string;
+}
+
+interface MessageRow {
+  id: string;
+  opportunity_id: string;
+  role: "user" | "assistant";
+  content: string;
+  attachments: AttachmentRef[] | null;
+  created_at: string;
+}
+
+function rowToStoredMessage(row: MessageRow): StoredMessage {
+  return {
+    id: row.id,
+    role: row.role,
+    content: row.content,
+    attachments: row.attachments,
+    createdAt: row.created_at,
+  };
+}
+
+export async function listMessages(opportunityId: string): Promise<StoredMessage[]> {
+  const supabase = supabaseServer();
+  const { data, error } = await supabase
+    .from("opportunity_messages")
+    .select("*")
+    .eq("opportunity_id", opportunityId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`listMessages: ${error.message}`);
+  return (data as MessageRow[]).map(rowToStoredMessage);
+}
+
+async function saveMessage(
+  opportunityId: string,
+  role: "user" | "assistant",
+  content: string,
+  attachments: AttachmentRef[] | null = null
+): Promise<StoredMessage> {
+  const supabase = supabaseServer();
+  const { data, error } = await supabase
+    .from("opportunity_messages")
+    .insert({
+      opportunity_id: opportunityId,
+      role,
+      content,
+      attachments,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(`saveMessage: ${error.message}`);
+  return rowToStoredMessage(data as MessageRow);
+}
+
+export async function clearMessages(opportunityId: string): Promise<void> {
+  const supabase = supabaseServer();
+  const { error } = await supabase
+    .from("opportunity_messages")
+    .delete()
+    .eq("opportunity_id", opportunityId);
+  if (error) throw new Error(`clearMessages: ${error.message}`);
 }
 
 /**
@@ -112,7 +188,8 @@ function formatAttachmentContext(attachments: Attachment[]): string {
 }
 
 export interface AgentReplyResult {
-  reply: string;
+  userMessage: StoredMessage;
+  assistantMessage: StoredMessage;
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -121,58 +198,93 @@ export interface AgentReplyResult {
   };
 }
 
-export async function agentReply(
-  opportunityId: string,
-  messages: AgentMessage[]
-): Promise<AgentReplyResult> {
-  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
-    throw new Error("Conversation must end with a user message.");
+export interface AgentSendInput {
+  opportunityId: string;
+  content: string;
+  attachments?: AttachmentRef[] | null;
+}
+
+/**
+ * Append a new user message to the opportunity's conversation, call the
+ * Anthropic API with the full history + context, save both turns to the DB,
+ * and return them.
+ */
+export async function agentReply(input: AgentSendInput): Promise<AgentReplyResult> {
+  const { opportunityId, content, attachments } = input;
+  if (!content || !content.trim()) {
+    throw new Error("Message content is required.");
   }
 
   const opp = await getOpportunity(opportunityId);
   if (!opp) throw new Error(`Opportunity ${opportunityId} not found.`);
 
-  const attachments = await listAttachmentsByOpportunity(opportunityId);
+  // Persist the user message first so it's recorded even if the API call fails.
+  const userMessage = await saveMessage(
+    opportunityId,
+    "user",
+    content.trim(),
+    attachments && attachments.length > 0 ? attachments : null
+  );
 
+  // Build the full history (now includes the just-saved user message).
+  const history = await listMessages(opportunityId);
+
+  // Build opportunity context (re-read attachments so any just-uploaded files
+  // are included).
+  const oppAttachments = await listAttachmentsByOpportunity(opportunityId);
   const opportunityContext =
-    formatOpportunityContext(opp) + formatAttachmentContext(attachments);
+    formatOpportunityContext(opp) + formatAttachmentContext(oppAttachments);
 
   const anthropic = client();
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
 
-  const response = await anthropic.messages.create({
-    model,
-    max_tokens: 2048,
-    system: [
-      // Static business context — cached across all opportunities/messages.
-      {
-        type: "text",
-        text: ASPEN_HILLS_CONTEXT,
-        cache_control: { type: "ephemeral" },
-      },
-      // Per-opportunity context — cached across messages within the same chat
-      // (lasts ~5 min before cache expires).
-      {
-        type: "text",
-        text: opportunityContext,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
+  let response: Anthropic.Message;
+  try {
+    response = await anthropic.messages.create({
+      model,
+      max_tokens: 2048,
+      system: [
+        {
+          type: "text",
+          text: ASPEN_HILLS_CONTEXT,
+          cache_control: { type: "ephemeral" },
+        },
+        {
+          type: "text",
+          text: opportunityContext,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: history.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    });
+  } catch (err) {
+    // Roll back the user message so the conversation isn't left dangling.
+    const supabase = supabaseServer();
+    await supabase
+      .from("opportunity_messages")
+      .delete()
+      .eq("id", userMessage.id);
+    throw err;
+  }
 
-  // Extract text from the response (block content can be multiple text parts).
-  const reply = response.content
+  const replyText = response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("\n")
     .trim();
 
+  const assistantMessage = await saveMessage(
+    opportunityId,
+    "assistant",
+    replyText
+  );
+
   return {
-    reply,
+    userMessage,
+    assistantMessage,
     usage: {
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,

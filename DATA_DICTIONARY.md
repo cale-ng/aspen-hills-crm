@@ -9,6 +9,7 @@
 **Applied migrations:**
 - `0002_context_library.sql` — adds `kind`, `tag`, `note`, `extracted_text` to `attachments`
 - `0003_split_contact.sql` — adds `contact_name`, `email`, `phone` to `opportunities`. Legacy `contact` column retained for backward compatibility; can be dropped in a future migration.
+- `0004_agent_messages.sql` — creates `opportunity_messages` for persistent agent conversations per opportunity.
 
 ---
 
@@ -117,6 +118,24 @@ Files attached to an opportunity. Actual file bytes live in Supabase Storage; th
 ### Indexes
 - `attachments_opportunity_idx` on `(opportunity_id)`
 - `attachments_kind_idx` on `(kind)`
+
+---
+
+## Table: `public.opportunity_messages`
+
+Persistent chat history between Cale and the Aspen Agent, per opportunity. One row per turn (user or assistant). Loaded on detail panel open; cleared via the "New chat" button.
+
+| Column | Type | Nullable | Default | Purpose |
+|---|---|---|---|---|
+| `id` | `uuid` | no | `gen_random_uuid()` | Primary key |
+| `opportunity_id` | `uuid` | no | — | FK → `opportunities(id)`. **`ON DELETE CASCADE`** — deleting an opportunity removes its chat |
+| `role` | `text` | no | — | Check constraint: `user \| assistant` |
+| `content` | `text` | no | — | The message text |
+| `attachments` | `jsonb` | yes | — | `AttachmentRef[]` for user messages (display-only metadata — actual attachment data lives in the `attachments` table) |
+| `created_at` | `timestamptz` | no | `now()` | Used for ordering |
+
+### Indexes
+- `opportunity_messages_opp_created_idx` on `(opportunity_id, created_at asc)` — supports the load-history query
 
 ---
 

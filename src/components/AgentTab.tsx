@@ -1,25 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Attachment, ContextKind } from "@/lib/types";
 
 type AttachmentRef = {
   id: string;
   name: string;
-  kind: ContextKind;
+  kind: ContextKind | string;
   extracted: boolean;
 };
 
 type Message = {
+  /** Server-issued id once persisted. May be a temporary client id while pending. */
+  id: string;
   role: "user" | "assistant";
   content: string;
-  /** Attachments uploaded along with this user message (user role only). */
-  attachments?: AttachmentRef[];
+  attachments?: AttachmentRef[] | null;
+  /** True while waiting for the server to confirm + return the saved row. */
+  pending?: boolean;
 };
 
 const MAX_FILE_SIZE_MB = 10;
 
-/** Auto-detect a context kind for a file dropped into chat. */
 function detectKind(file: File): ContextKind {
   const n = file.name.toLowerCase();
   const t = file.type;
@@ -29,40 +31,6 @@ function detectKind(file: File): ContextKind {
   if (n.includes("jd") || n.includes("job")) return "job_description";
   if (n.endsWith(".pptx") || n.endsWith(".key")) return "deck";
   return "document";
-}
-
-const STORAGE_PREFIX = "aspen-agent-chat:";
-
-function storageKey(opportunityId: string) {
-  return `${STORAGE_PREFIX}${opportunityId}`;
-}
-
-function loadMessages(opportunityId: string): Message[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(storageKey(opportunityId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Message[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveMessages(opportunityId: string, messages: Message[]) {
-  if (typeof window === "undefined") return;
-  try {
-    if (messages.length === 0) {
-      window.localStorage.removeItem(storageKey(opportunityId));
-    } else {
-      window.localStorage.setItem(
-        storageKey(opportunityId),
-        JSON.stringify(messages)
-      );
-    }
-  } catch {
-    // Quota exceeded or storage disabled — fail silently.
-  }
 }
 
 const QUICK_ACTIONS: { label: string; prompt: string }[] = [
@@ -99,10 +67,8 @@ const QUICK_ACTIONS: { label: string; prompt: string }[] = [
 ];
 
 export function AgentTab({ opportunityId }: { opportunityId: string }) {
-  // Initialize from localStorage so chat survives tab switches + page refreshes.
-  const [messages, setMessages] = useState<Message[]>(() =>
-    loadMessages(opportunityId)
-  );
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pending, setPending] = useState(false);
@@ -112,28 +78,33 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
   const endRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reload conversation if the user switches to a different opportunity.
-  useEffect(() => {
-    setMessages(loadMessages(opportunityId));
+  const loadHistory = useCallback(async () => {
+    setHistoryLoaded(false);
     setError(null);
-    setInput("");
-    setPendingFiles([]);
+    try {
+      const res = await fetch(`/api/opportunities/${opportunityId}/agent`);
+      if (!res.ok) throw new Error(`History load failed (${res.status})`);
+      const { messages: serverMessages } = (await res.json()) as {
+        messages: Message[];
+      };
+      setMessages(serverMessages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setHistoryLoaded(true);
+    }
   }, [opportunityId]);
 
-  // Persist on every change.
   useEffect(() => {
-    saveMessages(opportunityId, messages);
-  }, [opportunityId, messages]);
+    setMessages([]);
+    setInput("");
+    setPendingFiles([]);
+    loadHistory();
+  }, [opportunityId, loadHistory]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, pending]);
-
-  function clearChat() {
-    if (messages.length > 0 && !confirm("Clear this conversation?")) return;
-    setMessages([]);
-    setError(null);
-  }
 
   function addFiles(files: FileList | File[] | null) {
     if (!files) return;
@@ -155,10 +126,6 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
     setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  /**
-   * Upload each pending file via the existing attachments API. Returns
-   * AttachmentRefs to display on the user message bubble.
-   */
   async function uploadPendingFiles(): Promise<AttachmentRef[]> {
     const refs: AttachmentRef[] = [];
     for (const file of pendingFiles) {
@@ -186,41 +153,39 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
     return refs;
   }
 
-  async function send(text: string, opts: { allowEmptyText?: boolean } = {}) {
+  async function send(text: string) {
     const trimmed = text.trim();
     const hasFiles = pendingFiles.length > 0;
-    if (!trimmed && !hasFiles && !opts.allowEmptyText) return;
-    if (pending) return;
+    if ((!trimmed && !hasFiles) || pending) return;
 
     setPending(true);
     setError(null);
 
     let uploadedRefs: AttachmentRef[] = [];
     try {
-      if (hasFiles) {
-        uploadedRefs = await uploadPendingFiles();
-      }
+      if (hasFiles) uploadedRefs = await uploadPendingFiles();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload error");
       setPending(false);
       return;
     }
 
-    // Construct the user message. If there's no typed text but there are
-    // files, generate a sensible prompt so the agent has something to react to.
     let userContent = trimmed;
     if (!userContent && uploadedRefs.length > 0) {
       const names = uploadedRefs.map((r) => r.name).join(", ");
       userContent = `I've attached: ${names}. Please review and tell me what's useful, then suggest next steps.`;
     }
 
-    const userMessage: Message = {
+    // Optimistically render the user message immediately.
+    const tempId = `tmp-${Date.now()}`;
+    const optimistic: Message = {
+      id: tempId,
       role: "user",
       content: userContent,
-      attachments: uploadedRefs.length > 0 ? uploadedRefs : undefined,
+      attachments: uploadedRefs.length > 0 ? uploadedRefs : null,
+      pending: true,
     };
-    const next = [...messages, userMessage];
-    setMessages(next);
+    setMessages((prev) => [...prev, optimistic]);
     setInput("");
     setPendingFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -230,18 +195,28 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: next.map((m) => ({ role: m.role, content: m.content })),
+          content: userContent,
+          attachments: uploadedRefs.length > 0 ? uploadedRefs : undefined,
         }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }));
         throw new Error(body.error || `Agent failed (${res.status})`);
       }
-      const { reply } = (await res.json()) as { reply: string };
-      setMessages([...next, { role: "assistant", content: reply }]);
+      const { userMessage, assistantMessage } = (await res.json()) as {
+        userMessage: Message;
+        assistantMessage: Message;
+      };
+      // Replace the optimistic message with the server-saved one + append reply.
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== tempId),
+        userMessage,
+        assistantMessage,
+      ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
-      // Leave the user message in place so they can retry.
+      // Remove the optimistic message — server didn't persist anything.
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
       setPending(false);
     }
@@ -259,6 +234,29 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
     }
   }
 
+  async function clearChat() {
+    if (messages.length === 0) return;
+    if (
+      !confirm(
+        "Clear this entire conversation? This will permanently delete the chat history for this opportunity."
+      )
+    )
+      return;
+
+    try {
+      const res = await fetch(`/api/opportunities/${opportunityId}/agent`, {
+        method: "DELETE",
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`Clear failed (${res.status})`);
+      }
+      setMessages([]);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    }
+  }
+
   return (
     <div
       className="flex flex-col h-full -m-6 relative"
@@ -269,7 +267,6 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
         }
       }}
       onDragLeave={(e) => {
-        // Only clear when leaving the container itself, not a child element.
         if (e.target === e.currentTarget) setDragOver(false);
       }}
       onDrop={(e) => {
@@ -278,7 +275,6 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
         addFiles(e.dataTransfer.files);
       }}
     >
-      {/* Drop overlay */}
       {dragOver && (
         <div
           className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
@@ -294,8 +290,8 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
         </div>
       )}
 
-      {/* Quick actions (only when there are no messages yet) */}
-      {messages.length === 0 && (
+      {/* Empty state: header + quick actions */}
+      {historyLoaded && messages.length === 0 && (
         <div className="p-6 flex flex-col gap-4">
           <div>
             <h3
@@ -308,10 +304,10 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
               Aspen Agent
             </h3>
             <p className="text-xs text-text-muted mt-1">
-              Ask anything about this opportunity. The agent has read access to all
-              opportunity fields plus any context you&apos;ve uploaded in the Files tab
-              (transcripts, emails, JDs, etc.). You can also drop files directly into
-              the chat — they&apos;ll be filed into the Context Library automatically.
+              Ask anything about this opportunity. The agent reads all opportunity
+              fields plus any context you&apos;ve uploaded (transcripts, emails, JDs,
+              etc.). Conversations are saved permanently to this opportunity — pick
+              them back up any time, any device.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -337,12 +333,20 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
         </div>
       )}
 
+      {/* Loading state */}
+      {!historyLoaded && (
+        <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+          Loading conversation…
+        </div>
+      )}
+
       {/* Conversation */}
-      {messages.length > 0 && (
+      {historyLoaded && messages.length > 0 && (
         <>
           <div className="flex items-center justify-between px-6 pt-4 pb-2">
             <span className="text-[10px] uppercase tracking-[0.2em] text-text-dim">
-              Conversation
+              Conversation · {messages.length} message
+              {messages.length === 1 ? "" : "s"}
             </span>
             <button
               type="button"
@@ -353,8 +357,8 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
             </button>
           </div>
           <div className="flex-1 overflow-auto px-6 pb-4 flex flex-col gap-4">
-            {messages.map((m, i) => (
-              <MessageBubble key={i} role={m.role} content={m.content} />
+            {messages.map((m) => (
+              <MessageBubble key={m.id} {...m} />
             ))}
             {pending && (
               <div className="text-text-muted text-xs italic">
@@ -384,7 +388,6 @@ export function AgentTab({ opportunityId }: { opportunityId: string }) {
         onSubmit={handleSubmit}
         className="border-t border-border-subtle px-6 py-4 flex flex-col gap-2"
       >
-        {/* Pending file chips */}
         {pendingFiles.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {pendingFiles.map((f, idx) => (

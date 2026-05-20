@@ -85,7 +85,9 @@ Aspen Hills CRM/
 | `POST /api/opportunities/[id]/attachments` | Upload an attachment (multipart/form-data: `file`, `kind`, optional `tag` + `note`) |
 | `GET /api/attachments/[id]` | Get a short-lived signed URL (5 min) for viewing/downloading the file |
 | `DELETE /api/attachments/[id]` | Delete an attachment (removes Storage object + DB row) |
-| `POST /api/opportunities/[id]/agent` | Send a message to the Aspen Agent; returns reply + token usage |
+| `GET /api/opportunities/[id]/agent` | Load the full conversation history for this opportunity |
+| `POST /api/opportunities/[id]/agent` | Send a new user message; server saves it, calls Anthropic with full history + context, saves the assistant reply, returns both |
+| `DELETE /api/opportunities/[id]/agent` | Clear the entire conversation for this opportunity |
 
 Mutation logic + validation lives in `src/lib/mutations.ts` — route handlers are thin wrappers around it.
 
@@ -116,7 +118,8 @@ Stored in `.env.local` (git-ignored). Template at `.env.local.example`.
 | AI calls server-side only | 2026-05-15 | Anthropic key would otherwise leak to the browser |
 | Pricing stored as JSONB | 2026-05-15 | Nested structure (equity trigger, recommendation) doesn't justify separate tables for v1 |
 | Aspen Agent uses full-context stuffing + Anthropic prompt caching (no embeddings yet) | 2026-05-20 | Sonnet 4.6 has a 200K context window; all uploaded text per opportunity fits easily today. Caching the system prompt + opportunity context makes follow-up turns cheap. Adding embeddings/RAG only if a single opportunity exceeds context. |
-| Agent chat is in-browser ephemeral state (no DB persistence) | 2026-05-20 | Defers a `messages` table. Conversations are short-lived working sessions, not long-running threads. Add persistence in a later version if usage shows it matters. |
+| Agent chat is in-browser ephemeral state (no DB persistence) | 2026-05-20 | Defers a `messages` table. Conversations are short-lived working sessions, not long-running threads. Add persistence in a later version if usage shows it matters. **Reversed in V0.6.3** — see below. |
+| Agent chat persisted to DB via `opportunity_messages` table | 2026-05-20 (V0.6.3) | Reversal of the prior decision based on real usage: conversations need to survive devices/browsers/refreshes and become part of the opportunity's record. Server stores each turn; AgentTab fetches history on mount. localStorage removed. |
 | Agent tab replaces the originally-planned "Sales Pitch" tab | 2026-05-20 | The agent can draft pitches on demand (one of its quick actions); a dedicated pitch tab adds a redundant UI surface for the same capability. |
 
 ---

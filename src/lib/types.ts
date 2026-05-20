@@ -158,9 +158,14 @@ export function rowToAttachment(row: AttachmentRow): Attachment {
 export interface Opportunity {
   id: string;
   company: string;
+  /** @deprecated Legacy free-text contact field. Prefer contactName/email/phone. */
   contact: string | null;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
   website: string | null;
   industry: string | null;
+  /** Kept on the record for AI extraction; no longer in the manual intake form. */
   revenue: string | null;
   currentPain: string | null;
   scopeNotes: string | null;
@@ -180,6 +185,9 @@ export interface OpportunityRow {
   id: string;
   company: string;
   contact: string | null;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
   website: string | null;
   industry: string | null;
   revenue: string | null;
@@ -200,8 +208,11 @@ export function rowToOpportunity(row: OpportunityRow): Opportunity {
     id: row.id,
     company: row.company,
     contact: row.contact,
+    contactName: row.contact_name,
+    email: row.email,
+    phone: row.phone,
     website: row.website,
-    industry: row.industry,
+    industry: row.industry ?? null,
     revenue: row.revenue,
     currentPain: row.current_pain,
     scopeNotes: row.scope_notes,

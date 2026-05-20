@@ -4,6 +4,36 @@
 
 ---
 
+## V0.5.1 — 2026-05-20 · Intake form refinements + W7 workflow
+
+**Summary**
+Tuned the intake form based on real usage signal: dropped the "Est. Annual Revenue" field (not needed for quoting), split the single `contact` field into structured `contact_name`, `email`, `phone`. Added an inline hint that pain points/scope/notes are intended to be populated by the Aspen Agent from meeting transcripts — manual entry still works.
+
+Captured the full meeting-to-context workflow as **W7** in `APP_REQUIREMENTS.md` so V0.6 builds toward it directly.
+
+**Changes**
+- Migration `supabase/migrations/0003_split_contact.sql` — adds `contact_name`, `email`, `phone` to `opportunities`
+- `src/lib/types.ts` — `Opportunity` and `OpportunityRow` gain `contactName`/`email`/`phone`; legacy `contact` field deprecated but still read for display fallback
+- `src/lib/mutations.ts` — `OpportunityInput` accepts new fields; `validateAndShape` maps them
+- `src/components/IntakeForm.tsx` — removed Revenue field; new 3-column row for Contact name / Email / Phone; hint banner about agent-populated fields
+- `src/components/DetailPanel.tsx` — Overview tab shows new contact fields with mailto: / tel: links; falls back to legacy `contact` text for un-migrated rows
+- `src/lib/seed.ts` + `scripts/seed.ts` — updated to use the new contact structure
+- Docs: `APP_REQUIREMENTS.md` W1 updated, new W7 workflow added; `DATA_DICTIONARY.md` columns documented
+
+**Files affected**
+- `supabase/migrations/0003_split_contact.sql` (new)
+- `src/lib/{types,mutations,seed}.ts`
+- `src/components/{IntakeForm,DetailPanel}.tsx`
+- `scripts/seed.ts`
+- `APP_REQUIREMENTS.md`, `DATA_DICTIONARY.md`, `VERSION_HISTORY.md`
+
+**Known issues / pending**
+- User must apply `0003_split_contact.sql` in Supabase SQL editor before the new contact fields will persist
+- The two existing seeded rows (Be LOVE™, Husk) still have their data in the legacy `contact` column; opening them in the edit form and re-saving will migrate them to the new structured fields
+- W7 (agent-populated fields from transcripts) is documented but not yet implemented — V0.6 work
+
+---
+
 ## V0.5 — 2026-05-19 · Context Library (file uploads with typed kinds)
 
 **Summary**

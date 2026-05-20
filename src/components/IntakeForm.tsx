@@ -22,10 +22,11 @@ type Props = {
 
 type FormState = {
   company: string;
-  contact: string;
+  contactName: string;
+  email: string;
+  phone: string;
   website: string;
   industry: string;
-  revenue: string;
   currentPain: string;
   scopeNotes: string;
   notes: string;
@@ -37,10 +38,11 @@ type FormState = {
 function toFormState(opp: Opportunity | null): FormState {
   return {
     company: opp?.company ?? "",
-    contact: opp?.contact ?? "",
+    contactName: opp?.contactName ?? "",
+    email: opp?.email ?? "",
+    phone: opp?.phone ?? "",
     website: opp?.website ?? "",
     industry: opp?.industry ?? "",
-    revenue: opp?.revenue ?? "",
     currentPain: opp?.currentPain ?? "",
     scopeNotes: opp?.scopeNotes ?? "",
     notes: opp?.notes ?? "",
@@ -71,10 +73,11 @@ export function IntakeForm({ existing, onCancel, onSaved, onDeleted }: Props) {
     // Convert empty strings to null so the DB stores NULL rather than "".
     const body = {
       company: state.company.trim(),
-      contact: state.contact.trim() || null,
+      contactName: state.contactName.trim() || null,
+      email: state.email.trim() || null,
+      phone: state.phone.trim() || null,
       website: state.website.trim() || null,
       industry: state.industry.trim() || null,
-      revenue: state.revenue.trim() || null,
       currentPain: state.currentPain.trim() || null,
       scopeNotes: state.scopeNotes.trim() || null,
       notes: state.notes.trim() || null,
@@ -170,16 +173,37 @@ export function IntakeForm({ existing, onCancel, onSaved, onDeleted }: Props) {
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Primary Contact">
+      <div className="grid grid-cols-3 gap-4">
+        <Field label="Contact name">
           <input
             type="text"
-            value={state.contact}
-            onChange={(e) => update("contact", e.target.value)}
+            value={state.contactName}
+            onChange={(e) => update("contactName", e.target.value)}
             className={inputCls}
-            placeholder="Taylor · taylor@drink.love"
+            placeholder="Taylor Smith"
           />
         </Field>
+        <Field label="Email">
+          <input
+            type="email"
+            value={state.email}
+            onChange={(e) => update("email", e.target.value)}
+            className={inputCls}
+            placeholder="taylor@drink.love"
+          />
+        </Field>
+        <Field label="Phone">
+          <input
+            type="tel"
+            value={state.phone}
+            onChange={(e) => update("phone", e.target.value)}
+            className={inputCls}
+            placeholder="Optional"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <Field label="Website">
           <input
             type="text"
@@ -189,9 +213,6 @@ export function IntakeForm({ existing, onCancel, onSaved, onDeleted }: Props) {
             placeholder="drink.love"
           />
         </Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
         <Field label="Industry / Category">
           <input
             type="text"
@@ -201,15 +222,20 @@ export function IntakeForm({ existing, onCancel, onSaved, onDeleted }: Props) {
             placeholder="Functional Beverage"
           />
         </Field>
-        <Field label="Est. Annual Revenue / Stage">
-          <input
-            type="text"
-            value={state.revenue}
-            onChange={(e) => update("revenue", e.target.value)}
-            className={inputCls}
-            placeholder="$5M–$8M"
-          />
-        </Field>
+      </div>
+
+      <div
+        className="rounded-md p-3 text-xs leading-relaxed"
+        style={{
+          color: "var(--text-muted)",
+          backgroundColor: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)",
+        }}
+      >
+        💡 <span className="text-text-secondary">Pain points, scope, and notes</span> are
+        populated by the Aspen Agent after a meeting — upload the Fathom transcript or
+        notes in the <span className="text-text-secondary">Files</span> tab and the agent
+        will summarize and fill these in. You can also edit manually below.
       </div>
 
       <Field label="Current Pain Points">
@@ -218,7 +244,7 @@ export function IntakeForm({ existing, onCancel, onSaved, onDeleted }: Props) {
           value={state.currentPain}
           onChange={(e) => update("currentPain", e.target.value)}
           className={textareaCls}
-          placeholder="What's broken? Why did they reach out?"
+          placeholder="What's broken? Why did they reach out? (Or leave blank — agent will fill from meeting context.)"
         />
       </Field>
 

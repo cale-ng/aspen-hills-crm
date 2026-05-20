@@ -2,12 +2,13 @@
 
 > Living document. Update whenever a table, column, or storage bucket is added or modified. Source of truth: [`supabase/schema.sql`](supabase/schema.sql).
 
-**Last updated:** 2026-05-19 · **Version:** V0.5
+**Last updated:** 2026-05-20 · **Version:** V0.5.1
 
 **Schema status:** Live in Supabase project `vzoiqclipckfxiihvxlh`. Originally applied via `supabase/reset.sql`. Subsequent column changes are tracked as numbered migrations in `supabase/migrations/` and applied by pasting into the Supabase SQL editor.
 
 **Applied migrations:**
 - `0002_context_library.sql` — adds `kind`, `tag`, `note`, `extracted_text` to `attachments`
+- `0003_split_contact.sql` — adds `contact_name`, `email`, `phone` to `opportunities`. Legacy `contact` column retained for backward compatibility; can be dropped in a future migration.
 
 ---
 
@@ -28,10 +29,13 @@ A single sales opportunity (a brand that may become a retainer client).
 |---|---|---|---|---|
 | `id` | `uuid` | no | `gen_random_uuid()` | Primary key |
 | `company` | `text` | no | — | Brand name (required) |
-| `contact` | `text` | yes | — | Free text: name · role · email |
+| `contact` | `text` | yes | — | **Deprecated.** Legacy free-text "name · role · email". Still read for display fallback on rows that haven't been re-saved through the new form. Will be dropped in a future migration. |
+| `contact_name` | `text` | yes | — | Primary contact's name (e.g. "Taylor Smith") |
+| `email` | `text` | yes | — | Primary contact email |
+| `phone` | `text` | yes | — | Primary contact phone (optional) |
 | `website` | `text` | yes | — | URL or bare domain |
 | `industry` | `text` | yes | — | Free text category (e.g. "Functional Beverage") |
-| `revenue` | `text` | yes | — | Free text revenue/stage (e.g. "$5M–$8M") |
+| `revenue` | `text` | yes | — | Free text revenue/stage. **No longer captured in the manual intake form** (V0.5.1) — kept on the record for the Aspen Agent to populate from meeting context. |
 | `current_pain` | `text` | yes | — | Why they reached out / what's broken |
 | `scope_notes` | `text` | yes | — | What they're asking for |
 | `notes` | `text` | yes | — | Referral source, network notes, free-form |

@@ -154,15 +154,40 @@ function StageSelector({
 }
 
 function InfoGrid({ opp }: { opp: Opportunity }) {
-  const items = [
-    { label: "Contact", value: opp.contact },
+  // Prefer the new structured contact field; fall back to legacy `contact` text
+  // for older rows that haven't been re-saved through the new intake form yet.
+  const contactDisplay = opp.contactName || opp.contact;
+
+  const items: { label: string; value: React.ReactNode }[] = [
+    { label: "Contact", value: contactDisplay },
+    {
+      label: "Email",
+      value: opp.email ? (
+        <a
+          href={`mailto:${opp.email}`}
+          className="hover:text-accent"
+        >
+          {opp.email}
+        </a>
+      ) : null,
+    },
+    {
+      label: "Phone",
+      value: opp.phone ? (
+        <a href={`tel:${opp.phone}`} className="hover:text-accent">
+          {opp.phone}
+        </a>
+      ) : null,
+    },
     {
       label: "Fit",
       value: opp.fit ? <FitDot fit={opp.fit} withLabel /> : null,
     },
     {
       label: "Est. Retainer",
-      value: opp.retainerEst ? `$${Number(opp.retainerEst).toLocaleString()}/mo` : null,
+      value: opp.retainerEst
+        ? `$${Number(opp.retainerEst).toLocaleString()}/mo`
+        : null,
     },
     {
       label: "Date Added",

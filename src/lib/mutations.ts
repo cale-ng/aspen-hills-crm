@@ -13,7 +13,11 @@ const FIT_VALUES: FitLevel[] = ["high", "medium", "low"];
 
 export interface OpportunityInput {
   company: string;
+  /** @deprecated Legacy free-text contact. Use contactName/email/phone instead. */
   contact?: string | null;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
   website?: string | null;
   industry?: string | null;
   revenue?: string | null;
@@ -46,6 +50,9 @@ function validateAndShape(
   const row: Record<string, unknown> = {};
   if (input.company !== undefined)      row.company       = input.company.trim();
   if (input.contact !== undefined)      row.contact       = input.contact;
+  if (input.contactName !== undefined)  row.contact_name  = input.contactName;
+  if (input.email !== undefined)        row.email         = input.email;
+  if (input.phone !== undefined)        row.phone         = input.phone;
   if (input.website !== undefined)      row.website       = input.website;
   if (input.industry !== undefined)     row.industry      = input.industry;
   if (input.revenue !== undefined)      row.revenue       = input.revenue;

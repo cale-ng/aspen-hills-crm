@@ -2,7 +2,7 @@
 
 > Living document. Update as requirements evolve. The canonical product spec lives in [`docs/aspen_hills_crm_spec.md`](docs/aspen_hills_crm_spec.md) — this file summarizes and tracks the build state against it.
 
-**Last updated:** 2026-05-19 · **Version:** V0.5
+**Last updated:** 2026-05-20 · **Version:** V0.5.1
 
 ---
 
@@ -18,8 +18,9 @@ Internal CRM for **Aspen Hills Advisors LLC** to track inbound and outbound sale
 
 ### W1 — Log a new opportunity
 1. Click "+ New Opportunity" in header
-2. Fill the intake form (company, contact, industry, pain points, scope, fit, retainer estimate, stage)
-3. Save → returns to tracker with the new opportunity selected
+2. Fill the intake form. Required: company name. Optional: contact name, email, phone, website, industry, fit, retainer estimate, stage.
+3. **Pain points, scope notes, and additional notes are typically left blank at intake** — they'll be populated by the Aspen Agent from meeting transcripts (see W7). Manual entry is still supported.
+4. Save → returns to tracker with the new opportunity selected
 
 ### W2 — Triage the pipeline
 1. Open the tracker (default view)
@@ -45,6 +46,22 @@ Internal CRM for **Aspen Hills Advisors LLC** to track inbound and outbound sale
 1. Open detail panel → "Files" tab
 2. Drag & drop or click to browse
 3. View files in modal (PDF in iframe, images inline)
+
+### W7 — Capture meeting context (Aspen Agent, V0.6)
+The core "lazy intake" workflow: most opportunity fields get populated **automatically from meetings**, not typed in by hand.
+
+1. After a client meeting, upload the Fathom transcript (or pasted notes) into the opportunity's **Files** tab, tagged as `transcript`
+2. Click "Summarize meeting" (or the agent runs automatically on transcript upload)
+3. The agent extracts:
+   - **Current pain points** → fills/updates the `currentPain` field
+   - **Scope discussion** → fills/updates `scopeNotes`
+   - **Decision-maker / org context / referral source** → appends to `notes`
+   - **Stage signals** → may suggest a stage transition (user confirms)
+   - **Action items** → posted as a structured to-do block on the detail panel
+   - **Suggested next steps** → surfaced as recommendations
+4. User reviews the suggested updates → accept / reject / edit before they land
+
+This is what makes pain/scope/notes "live" fields that grow with each conversation, rather than something Cale has to remember to type.
 
 ---
 

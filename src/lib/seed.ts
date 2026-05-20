@@ -7,7 +7,10 @@ export const SEED_OPPORTUNITIES: Opportunity[] = [
   {
     id: "belove-001",
     company: "Be LOVE™",
-    contact: "Taylor · taylor@drink.love",
+    contact: null,
+    contactName: "Taylor",
+    email: "taylor@drink.love",
+    phone: null,
     website: "drink.love",
     industry: "Functional Beverage / Electrolytes",
     revenue: "Early growth — Target, HEB, Life Time distribution",
@@ -16,7 +19,7 @@ export const SEED_OPPORTUNITIES: Opportunity[] = [
     scopeNotes:
       "Full fractional ops team from Aspen Hills covers SCM + coordinator layer from day one at fraction of FT cost. AI tooling explicitly called out in JD — strong model alignment.",
     notes:
-      "Founded by Kurt Seidensticker (Vital Proteins founder, Ghost Energy/Koia investor) and Leslie Scofield (Toms, Aviator Nation, Summit Series). Austin-based. Progressive Grocer Best New Product 2025. Contact: taylor@drink.love",
+      "Founded by Kurt Seidensticker (Vital Proteins founder, Ghost Energy/Koia investor) and Leslie Scofield (Toms, Aviator Nation, Summit Series). Austin-based. Progressive Grocer Best New Product 2025.",
     fit: "high",
     retainerEst: "7500",
     stage: "Pitching",
@@ -28,7 +31,10 @@ export const SEED_OPPORTUNITIES: Opportunity[] = [
   {
     id: "husk-001",
     company: "Husk",
-    contact: "Sarah Goldschmid · Co-Founder · sarah@drinkhusk.com",
+    contact: null,
+    contactName: "Sarah Goldschmid",
+    email: "sarah@drinkhusk.com",
+    phone: null,
     website: "drinkhusk.com",
     industry: "Functional Food / Fiber Supplements",
     revenue: "Pre-launch",
